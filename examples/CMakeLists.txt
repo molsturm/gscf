@@ -6,4 +6,4 @@ else()
 endif()
 
 # Include subdirectories:
-add_subdirectory(atom_scf)
+add_subdirectory(scf_dummy_integrals)

@@ -1,14 +1,15 @@
 #
 # The sources for this example executable
 #
-set(EXAMPLE_ATOMSCF_SOURCES
+set(EXAMPLE_SCF_DUMMY_SOURCES
+	integrals/IntegralsSturmian14.cc
 	main.cc)
 
 # Compile and link:
-add_executable(atom_scf ${EXAMPLE_ATOMSCF_SOURCES})
+add_executable(scf_dummy ${EXAMPLE_SCF_DUMMY_SOURCES})
 
 set_target_properties(
-	atom_scf
+	scf_dummy
 	PROPERTIES
 	LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS_${EXAMPLES_BUILD_TYPE}}" #${CMAKE_EXE_LINKER_FLAGS} are added
 	LINKER_LANGUAGE "CXX"
@@ -16,10 +17,10 @@ set_target_properties(
 )
 
 # setup definitions.
-target_compile_definitions(atom_scf PRIVATE "${GSCF_DEFINITIONS};${GSCF_DEFINITIONS_${EXAMPLES_BUILD_TYPE}}")
+target_compile_definitions(scf_dummy PRIVATE "${GSCF_DEFINITIONS};${GSCF_DEFINITIONS_${EXAMPLES_BUILD_TYPE}}")
 
 # link it with the appropriate linalgwrap library target
-target_link_libraries(atom_scf
+target_link_libraries(scf_dummy
 	${gscf_${EXAMPLES_BUILD_TYPE}_TARGET}
 	${GSCF_DEPENDENCIES}
 	${GSCF_DEPENDENCIES_${EXAMPLES_BUILD_TYPE}}

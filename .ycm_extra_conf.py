@@ -43,6 +43,7 @@ flags = [
     '-DDEBUG',
     # Compile extra code blocks:
     # '-DLINALGWRAP_HAVE_GLIBC_STACKTRACE',
+    '-DLINALGWRAP_HAVE_ARMADILLO',
     # Compile as c++14
     '-std=c++14',
     # Treat .h header files as c++:

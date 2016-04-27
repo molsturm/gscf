@@ -9,10 +9,36 @@ namespace scf_dummy {
 // TODO more comments in the functions of this class
 
 // XXX for debug
-std::ofstream mathematicafile2("/tmp/debug_gscf_fock.m");
-auto genoutfock = linalgwrap::io::make_writer<linalgwrap::io::Mathematica>(
-      mathematicafile2, 1e-6);
+std::ofstream mathematicafile("/tmp/debug_gscf.m");
+auto genout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica>(
+      mathematicafile, 1e-5);
 // XXX for debug
+
+template <typename Scalar>
+struct HFEnergies {
+    typedef Scalar scalar_type;
+
+    //! The kinetic energy:
+    scalar_type energy_kinetic;
+
+    //! The electron - nuclear attraction energy:
+    scalar_type energy_elec_nuc_attr;
+
+    //! The energy of the one electron terms:
+    scalar_type energy_1e_terms;
+
+    //! The energy of the coulomb term:
+    scalar_type energy_coulomb;
+
+    //! The energy of the exchange term:
+    scalar_type energy_exchange;
+
+    //! The energy of the one electron terms:
+    scalar_type energy_2e_terms;
+
+    //! The energy of the one electron terms:
+    scalar_type energy_total;
+};
 
 template <typename IntegralData>
 class FockMatrix
@@ -29,6 +55,7 @@ class FockMatrix
     typedef typename base_type::size_type size_type;
     typedef typename base_type::lazy_matrix_expression_ptr_type
           lazy_matrix_expression_ptr_type;
+    typedef HFEnergies<scalar_type> energies_type;
 
     /** Construct a Fock matrix from in integral_data object and an initial
      * guess, i.e. an initial set of coefficients.
@@ -73,6 +100,10 @@ class FockMatrix
      */
     void update(const linalgwrap::ParameterMap& map) override;
 
+    /** Return the current set of energies, calculated at the most recent update
+     */
+    const energies_type& get_energies() const;
+
   private:
     /** Calculate the coulomb matrix from a given density */
     stored_matrix_type calc_coulomb(const stored_matrix_type& density_bb);
@@ -93,7 +124,10 @@ class FockMatrix
     linalgwrap::SubscriptionPointer<const idata_type> m_idata_ptr;
 
     //! The actual fock matrix for the current set of coefficients
-    stored_matrix_type m_fock;
+    std::shared_ptr<stored_matrix_type> m_fock_ptr;
+
+    //! The current energy values:
+    energies_type m_energies;
 };
 
 //
@@ -107,20 +141,21 @@ FockMatrix<IntegralData>::FockMatrix(size_type n_alpha, size_type n_beta,
       : m_n_alpha{n_alpha},
         m_n_beta{n_beta},
         m_idata_ptr{linalgwrap::make_subscription(integral_data, "FockMatrix")},
-        m_fock(integral_data.nbas(), integral_data.nbas(), false) {
+        m_fock_ptr(std::make_shared<stored_matrix_type>(
+              integral_data.nbas(), integral_data.nbas(), false)) {
     build_fock_matrix(initial_guess);
 }
 
 template <typename IntegralData>
 typename FockMatrix<IntegralData>::size_type FockMatrix<IntegralData>::n_rows()
       const {
-    return m_fock.n_rows();
+    return m_fock_ptr->n_rows();
 }
 
 template <typename IntegralData>
 typename FockMatrix<IntegralData>::size_type FockMatrix<IntegralData>::n_cols()
       const {
-    return m_fock.n_cols();
+    return m_fock_ptr->n_cols();
 }
 
 template <typename IntegralData>
@@ -128,14 +163,14 @@ typename FockMatrix<IntegralData>::scalar_type FockMatrix<IntegralData>::
 operator()(size_type row, size_type col) const {
     assert_greater(row, n_rows());
     assert_greater(col, n_cols());
-    return m_fock(row, col);
+    return (*m_fock_ptr)(row, col);
 }
 
 template <typename IntegralData>
 typename FockMatrix<IntegralData>::stored_matrix_type FockMatrix<IntegralData>::
 operator*(const stored_matrix_type& in) const {
-    assert_size(m_fock.n_cols(), in.n_rows());
-    return m_fock * in;
+    assert_size(m_fock_ptr->n_cols(), in.n_rows());
+    return *m_fock_ptr * in;
 }
 
 template <typename IntegralData>
@@ -154,6 +189,12 @@ void FockMatrix<IntegralData>::update(const linalgwrap::ParameterMap& map) {
         const auto& coeff = map.at<stored_matrix_type>(coeff_key);
         build_fock_matrix(coeff);
     }
+}
+
+template <typename IntegralData>
+const typename FockMatrix<IntegralData>::energies_type&
+FockMatrix<IntegralData>::get_energies() const {
+    return m_energies;
 }
 
 template <typename IntegralData>
@@ -205,8 +246,6 @@ typename FockMatrix<IntegralData>::stored_matrix_type
 FockMatrix<IntegralData>::calc_exchange(const stored_matrix_type& density_bb) {
     using namespace linalgwrap;
 
-    // TODO something not quite correct here ...
-
     assert_dbg(density_bb.n_rows() == density_bb.n_cols(), ExcInternalError());
 
     // Number of basis fuctions:
@@ -246,39 +285,81 @@ void FockMatrix<IntegralData>::build_fock_matrix(
       const stored_matrix_type& coefficients_bf) {
     using namespace linalgwrap;
 
+    // Shortcut to number of basis functions:
+    size_type nbas = m_idata_ptr->nbas();
+
     // Assert coefficients have the correct size:
-    assert_size(m_idata_ptr->nbas(), coefficients_bf.n_rows());
+    assert_size(nbas, coefficients_bf.n_rows());
 
     // Coefficients for occupied orbitals only:
-    auto occa = view::columns(coefficients_bf, range(m_n_alpha));
-    auto occb = view::columns(coefficients_bf, range(m_n_beta));
+    auto ca_bo = view::columns(coefficients_bf, range(m_n_alpha));
+    auto cb_bo = view::columns(coefficients_bf, range(m_n_beta));
 
-    // Resulting density for alpha and beta spin:
+    // Density for alpha and beta spin and the total density:
     stored_matrix_type pa_bb =
-          static_cast<stored_matrix_type>(occa * view::transpose(occa));
+          static_cast<stored_matrix_type>(ca_bo * view::transpose(ca_bo));
     stored_matrix_type pb_bb =
-          static_cast<stored_matrix_type>(occb * view::transpose(occb));
-
-    // Total density
+          static_cast<stored_matrix_type>(cb_bo * view::transpose(cb_bo));
     stored_matrix_type pt_bb = pa_bb + pb_bb;
 
-    // Build two-electron terms and add everything to get fock matrix:
+    // Build 2e terms:
+    auto j_bb = calc_coulomb(pt_bb);
+    auto ka_bb = calc_exchange(pa_bb);
+    auto kb_bb = calc_exchange(pb_bb);
 
+    // Calculate 1e energy:
+    // TODO this is a hell of a hack, due to the view::view call.
+    // This does feel wrong. But otherwise we get a compile error!
+    m_energies.energy_kinetic =
+          (view::transpose(ca_bo) * view::view(m_idata_ptr->t_bb()) * ca_bo +
+           view::transpose(cb_bo) * view::view(m_idata_ptr->t_bb()) * cb_bo)
+                .trace();
+    m_energies.energy_elec_nuc_attr =
+          (view::transpose(ca_bo) * view::view(m_idata_ptr->v0_bb()) * ca_bo +
+           view::transpose(cb_bo) * view::view(m_idata_ptr->v0_bb()) * cb_bo)
+                .trace();
+    m_energies.energy_1e_terms =
+          m_energies.energy_kinetic + m_energies.energy_elec_nuc_attr;
+
+    // Calculate 2e energies and sum:
+    m_energies.energy_coulomb =
+          0.5 * ((view::transpose(ca_bo) * view::view(j_bb) * ca_bo +
+                  view::transpose(cb_bo) * view::view(j_bb) * cb_bo)
+                       .trace());
+    m_energies.energy_exchange =
+          -0.5 * ((view::transpose(ca_bo) * view::view(ka_bb) * ca_bo +
+                   view::transpose(cb_bo) * view::view(kb_bb) * cb_bo)
+                        .trace());
+    m_energies.energy_2e_terms =
+          m_energies.energy_coulomb + m_energies.energy_exchange;
+    m_energies.energy_total =
+          m_energies.energy_1e_terms + m_energies.energy_2e_terms;
+
+    // If our fock pointer is not unique, i.e. there are other users,
+    // make a new one first:
+    if (!m_fock_ptr.unique()) {
+        m_fock_ptr = std::make_shared<stored_matrix_type>(
+              m_fock_ptr->n_rows(), m_fock_ptr->n_cols(), false);
+    }
+
+    // Build two-electron terms and add everything to get fock matrix:
     // TODO adapt this method and class for open-shell calculations!
-    m_fock = m_idata_ptr->t_bb()      // kinetic energy term
-             + m_idata_ptr->v0_bb()   // nuc-electron attract. potential term
-             + calc_coulomb(pt_bb)    // coloumb of full density
-             - calc_exchange(pa_bb);  // exchange of same-spin density
+    *m_fock_ptr = m_idata_ptr->t_bb()  // kinetic energy term
+                  +
+                  m_idata_ptr->v0_bb()   // nuc-electron attract. potential term
+                  + calc_coulomb(pt_bb)  // coloumb of full density
+                  - calc_exchange(pa_bb);  // exchange of same-spin density
     // TODO for beta fock matrix and uhf:
     //  m_fock_b = ... - build_exchange(pb_bb);
 
     // XXX for debug
     static size_t count = 0;
-    genoutfock.write(coefficients_bf, "cbf" + std::to_string(++count));
-    genoutfock.write(pt_bb, "pbb" + std::to_string(count));
-    genoutfock.write(calc_coulomb(pt_bb), "jbb" + std::to_string(count));
-    genoutfock.write(calc_exchange(pa_bb), "kbb" + std::to_string(count));
-    genoutfock.write(m_fock, "fbb" + std::to_string(count));
+    genout.write(coefficients_bf, "cbf" + std::to_string(count));
+    genout.write(pt_bb, "pbb" + std::to_string(count));
+    genout.write(calc_coulomb(pt_bb), "jbb" + std::to_string(count));
+    genout.write(calc_exchange(pa_bb), "kbb" + std::to_string(count));
+    genout.write(*m_fock_ptr, "fbb" + std::to_string(count));
+    ++count;
     // XXX for debug
 }
 

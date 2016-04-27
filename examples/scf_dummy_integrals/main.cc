@@ -1,15 +1,16 @@
 #include "FockMatrix.hh"
 #include "integrals/IntegralsSturmian14.hh"
+#include <gscf/PlainScf.hh>
+//#include <gscf/PulayDiisScfSolver.hh>
 #include <gscf/version.hh>
 #include <iostream>
+#include <iterator>
 #include <linalgwrap/io.hh>
 #include <linalgwrap/version.hh>
 
 namespace scf_dummy {
 using namespace linalgwrap;
-
-std::ofstream mathematicafile("/tmp/debug_gscf.m");
-auto genout = io::make_writer<io::Mathematica>(mathematicafile, 1e-6);
+using namespace gscf;
 
 ArmadilloMatrix<double> hack_guess(const ArmadilloMatrix<double>& s_bb) {
     // apply Löwdin normalisation to the basis functions
@@ -51,6 +52,7 @@ ArmadilloMatrix<double> hack_guess(const ArmadilloMatrix<double>& s_bb) {
 void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
     typedef IntegralsSturmian14 idata_type;
     typedef idata_type::matrix_type matrix_type;
+    typedef idata_type::scalar_type scalar_type;
     typedef FockMatrix<idata_type> fock_type;
 
     // Define integral data:
@@ -60,12 +62,63 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
     matrix_type guess = hack_guess(idata.s_bb());
 
     // XXX debug
+    genout.write(guess, "guess");
     genout.write(idata.s_bb(), "sbb");
     // XXX debug
 
     fock_type fock{n_alpha, n_beta, idata, guess};
 
-    // TODO run scf
+    // Define SCF types:
+    typedef PlainScf<fock_type> scf_type;
+    typedef typename scf_type::scf_state_type scf_state_type;
+    typedef typename scf_type::scf_control_type scf_control_type;
+
+    // Allocate SCF objects:
+    scf_control_type scf_control;
+    scf_type scf(scf_control);
+
+    scf.update_eigenpair_handler([&](const scf_state_type& s) {
+        // Here we have the new eigenpairs and the old fock matrix.
+        genout.write(*s.eigenvalues_ptr,
+                     "evals" + std::to_string(s.n_iter_count()));
+        std::cout << "   New orbital eigenvalues: " << std::endl;
+
+        // Print orbital evals:
+        std::ostream_iterator<scalar_type> out_it(std::cout, " ");
+        std::cout << "        ";
+        std::copy(s.eigenvalues_ptr->begin(), s.eigenvalues_ptr->end(), out_it);
+        std::cout << std::endl;
+    });
+
+    scf.update_problem_matrix_handler([](const scf_state_type& s) {
+        typedef fock_type::energies_type energies_type;
+        energies_type hf_energies = s.problem_matrix_ptr->get_energies();
+
+        std::cout << "   Current HF energies:" << std::endl
+                  << "     E_kin    = " << hf_energies.energy_kinetic
+                  << std::endl
+                  << "     E_v0     = " << hf_energies.energy_elec_nuc_attr
+                  << std::endl
+                  << "     E_coul   = " << hf_energies.energy_coulomb
+                  << std::endl
+                  << "     E_xchge  = " << hf_energies.energy_exchange
+                  << std::endl
+                  << std::endl
+                  << "     E_1e     = " << hf_energies.energy_1e_terms
+                  << std::endl
+                  << "     E_2e     = " << hf_energies.energy_2e_terms
+                  << std::endl
+                  << std::endl
+                  << "     E_total  = " << hf_energies.energy_total
+                  << std::endl;
+    });
+
+    scf.pre_step_handler([](const scf_state_type& s) {
+        std::cout << std::endl
+                  << "Starting SCF iteration " << s.n_iter_count() << std::endl;
+    });
+
+    scf.solve_assert(fock, idata.s_bb());
 }
 }  // namespace scf_dummy
 

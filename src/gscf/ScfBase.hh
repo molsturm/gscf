@@ -31,32 +31,6 @@ class ScfBase {
     typedef typename scf_traits_type::matrix_type matrix_type;
     typedef typename scf_traits_type::vector_type vector_type;
 
-    typedef std::function<void(const scf_state_type&)> handler_type;
-    static const handler_type null_handler;
-
-    /** \name Set handler functions
-     * Set various handler functions.
-     */
-    ///@{
-    /** Set a handler to be called after an iteration step has finished.
-     *
-     * Call without an argument to unset the current handler.
-     */
-    void pre_step_handler(handler_type h = null_handler);
-
-    /** Set a handler to be called after the eigenpairs have been updated.
-     *
-     * Call without an argument to unset the current handler.
-     */
-    void update_eigenpair_handler(handler_type h = null_handler);
-
-    /** Set a handler to be called after the problem matrix has been updated
-     *
-     * Call without an argument to unset the current handler.
-     */
-    void update_problem_matrix_handler(handler_type h = null_handler);
-    ///@}
-
     /** \name Run an SCF
      */
     ///@{
@@ -95,10 +69,44 @@ class ScfBase {
     ///@}
 
   protected:
+    /** \name Handler functions
+     * Various virtual handler functions, which are called when
+     * certain events happen.
+     */
+    ///@{
+    /* Handler which is called before an iteration step is performed
+     *
+     * The iteration count has already been incremented.
+     * */
+    virtual void before_iteration_step(const scf_state_type&) const {}
+
+    /** Handler which is called once an iteration step finishes
+     *
+     * This is the last thing called before the convergence and sanity
+     * checks.
+     * */
+    virtual void after_iteration_step(const scf_state_type&) const {}
+
+    /** Handler which is called once the problem matrix has been diagonalised
+     *  and new eigenpairs are obtained for this problem matrix
+     */
+    virtual void on_update_eigenpairs(const scf_state_type&) const {}
+
+    /** Handler which is called once the new problem matrix has been formed
+     *  from the current set of eigenvectors
+     */
+    virtual void on_update_problem_matrix(const scf_state_type&) const {}
+    ///@}
+
     /** Construct an ScfBase object from an ScfControlBase object, which
      * contains the iteration parameters */
     ScfBase(const ScfControlBase<scf_traits_type>& scf_control);
 
+    /** \name Scf building blocks.
+     * Various virtual handler functions, which are called when
+     * certain events happen.
+     */
+    ///@{
     /** \brief Start the next iteration step
      *
      * Increase the iteration count and call the pre_step_handler.
@@ -131,17 +139,9 @@ class ScfBase {
      *   max_iter
      */
     void end_iteration_step(scf_state_type& s) const;
+    ///@}
 
   private:
-    //! The handler to call once an scf step has been done:
-    handler_type m_pre_step_handler = null_handler;
-
-    //! The handler to call once the eigensystem has been solved:
-    handler_type m_update_eigenpair_handler = null_handler;
-
-    //! The handler to call once the problem matrix has been updated:
-    handler_type m_update_problem_matrix_handler = null_handler;
-
     //! The SCF control object, which controls the convergence
     //  checks and iterations done in this class.
     linalgwrap::SubscriptionPointer<const ScfControlBase<scf_traits_type>>
@@ -151,25 +151,6 @@ class ScfBase {
 //
 // ------------------------------------
 //
-
-template <typename ScfState>
-const typename ScfBase<ScfState>::handler_type ScfBase<ScfState>::null_handler =
-      [](const typename ScfBase<ScfState>::scf_state_type&) {};
-
-template <typename ScfState>
-inline void ScfBase<ScfState>::pre_step_handler(handler_type h) {
-    m_pre_step_handler = h;
-}
-
-template <typename ScfState>
-inline void ScfBase<ScfState>::update_eigenpair_handler(handler_type h) {
-    m_update_eigenpair_handler = h;
-}
-
-template <typename ScfState>
-inline void ScfBase<ScfState>::update_problem_matrix_handler(handler_type h) {
-    m_update_problem_matrix_handler = h;
-}
 
 template <typename ScfState>
 inline typename ScfBase<ScfState>::scf_state_type
@@ -184,13 +165,13 @@ ScfBase<ScfState>::solve_assert(probmat_type probmat_bb,
 template <typename ScfState>
 inline typename ScfBase<ScfState>::scf_state_type ScfBase<ScfState>::solve(
       const scf_state_type& old_state) const {
-    return solve(*old_state.problem_matrix_ptr, *old_state.metric_matrix_ptr);
+    return solve(*old_state.problem_matrix_ptr(), old_state.metric_matrix());
 }
 
 template <typename ScfState>
 inline typename ScfBase<ScfState>::scf_state_type
 ScfBase<ScfState>::solve_assert(const scf_state_type& old_state) const {
-    scf_state_type state = solve(old_state, *old_state.metric_matrix_ptr);
+    scf_state_type state = solve(old_state);
     assert_throw(!state.is_failed(),
                  ExcScfFailedToConverge(state.fail_reason()));
     return state;
@@ -213,23 +194,22 @@ inline void ScfBase<ScfState>::start_iteration_step(scf_state_type& s) const {
     s.increase_iteration_count();
 
     // Call the pre step handler:
-    m_pre_step_handler(s);
+    before_iteration_step(s);
 }
 
 template <typename ScfState>
 void ScfBase<ScfState>::solve_eigensystem(scf_state_type& s) const {
     assert_greater_equal(m_scf_control_ptr->n_eigenpairs,
-                         s.problem_matrix_ptr->n_cols());
-
+                         s.problem_matrix_ptr()->n_cols());
     // Containers for the new eigenpairs:
     auto new_eigenvectors_ptr = std::make_shared<matrix_type>(
-          s.problem_matrix_ptr->n_rows(), m_scf_control_ptr->n_eigenpairs);
+          s.problem_matrix_ptr()->n_rows(), m_scf_control_ptr->n_eigenpairs);
     auto new_eigenvalues_ptr =
           std::make_shared<vector_type>(m_scf_control_ptr->n_eigenpairs);
 
     // Do eigenproblem:
     bool res =
-          detail::eig_sym_hack(*s.problem_matrix_ptr, *s.metric_matrix_ptr,
+          detail::eig_sym_hack(*s.problem_matrix_ptr(), s.metric_matrix(),
                                *new_eigenvectors_ptr, *new_eigenvalues_ptr);
 
     if (!res) {
@@ -239,24 +219,22 @@ void ScfBase<ScfState>::solve_eigensystem(scf_state_type& s) const {
     }
 
     // Update state:
-    s.eigenvectors_ptr = new_eigenvectors_ptr;
-    s.eigenvalues_ptr = new_eigenvalues_ptr;
+    s.eigenvectors_ptr() = new_eigenvectors_ptr;
+    s.eigenvalues_ptr() = new_eigenvalues_ptr;
 
     // call the handler:
-    m_update_eigenpair_handler(s);
+    on_update_eigenpairs(s);
 }
 
 template <typename ScfState>
 void ScfBase<ScfState>::update_problem_matrix(scf_state_type& s) const {
-    // TODO this might need to be generalised for the Coefficient-DIIS
-
     const std::string coeff_key = "evec_coefficients";
 
     // Store new coefficients in a parameter map:
     linalgwrap::ParameterMap m;
-    m.update(coeff_key, s.eigenvectors_ptr);
+    m.update(coeff_key, s.eigenvectors_ptr());
 
-    if (!s.problem_matrix_ptr.unique()) {
+    if (!s.problem_matrix_ptr().unique()) {
         // s is not the only thing referencing the object behind the
         // problem_matrix_ptr shared pointer, so we need to copy the object
         // first. This assuresthat objects that depend on the SCF state (i.e.
@@ -271,23 +249,27 @@ void ScfBase<ScfState>::update_problem_matrix(scf_state_type& s) const {
 
         // Copy the old problem matrix:
         auto new_problem_matrix_ptr =
-              std::make_shared<probmat_type>(*s.problem_matrix_ptr);
+              std::make_shared<probmat_type>(*s.problem_matrix_ptr());
 
         // Replace the current one in the state:
-        s.problem_matrix_ptr = new_problem_matrix_ptr;
+        s.problem_matrix_ptr() = new_problem_matrix_ptr;
     }
 
     // Update the new problem matrix:
-    s.problem_matrix_ptr->update(m);
+    s.problem_matrix_ptr()->update(m);
 
     // call the handler:
-    m_update_problem_matrix_handler(s);
+    on_update_problem_matrix(s);
 }
 
 template <typename ScfState>
 inline void ScfBase<ScfState>::end_iteration_step(scf_state_type& s) const {
-    if (s.n_iter_count() >= m_scf_control_ptr->max_iter)
+    // Call the handler:
+    after_iteration_step(s);
+
+    if (s.n_iter_count() >= m_scf_control_ptr->max_iter) {
         s.fail("Maximum number of iterations reached.");
+    }
 }
 
 }  // namespace gscf

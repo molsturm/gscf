@@ -26,12 +26,14 @@ Matrix invsqrtmat_hack(const Matrix& m) {
     arma::vec eval_arma;
     arma::mat evec_arma;
     bool success = arma::eig_sym(eval_arma, evec_arma, m_arma);
-    assert_dbg(success, ExcInternalError());
+    assert_abort(success, ExcInternalError());
 
+#ifdef DEBUG
     // Assert that the input matrix is positive definite:
     for (auto diag : eval_arma) {
         assert_greater_equal(0, diag);
     }
+#endif
 
     // take 1/sqrt( . ) for each eigenvalue:
     std::transform(std::begin(eval_arma), std::end(eval_arma),

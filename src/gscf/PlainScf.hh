@@ -78,7 +78,7 @@ class PlainScf : public ScfBase<PlainScfState<ScfTraits<ProblemMatrix>>> {
 
         // Compute the difference:
         matrix_type difference =
-              *s.eigenvalues_ptr - *s.previous_eigenvalues_ptr;
+              *s.eigenvalues_ptr() - *s.previous_eigenvalues_ptr;
 
         // Take absmax element of this diffenence
         // TODO Use matrix norm functions of linalgwrap once they are there
@@ -99,6 +99,14 @@ class PlainScf : public ScfBase<PlainScfState<ScfTraits<ProblemMatrix>>> {
     //      decide based on this data whether to end or continue.
     //    - Maybe have an extra class that gets the state and just does
     //      convergence checking?
+    //    - In any case the convergence check that is performed outside of
+    //      this class should be conveyed via a virtual call and *not* a
+    //      lambda (since the latter is manyfold slower)
+    //
+    //    It seems to me that this indicates that the basic iteration loop
+    //    is probably better located in the base class and only a virtual
+    //    iteration_step() function is really to overloaded and implemented
+    //    in this class
 
     linalgwrap::SubscriptionPointer<scf_control_type> m_scf_control_ptr;
 };
@@ -123,7 +131,7 @@ typename PlainScf<ProblemMatrix>::scf_state_type PlainScf<ProblemMatrix>::solve(
         base_type::start_iteration_step(state);
 
         // Update the pointer to the previous eigenvalues:
-        state.previous_eigenvalues_ptr = state.eigenvalues_ptr;
+        state.previous_eigenvalues_ptr = state.eigenvalues_ptr();
 
         base_type::solve_eigensystem(state);
         base_type::update_problem_matrix(state);

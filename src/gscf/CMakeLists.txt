@@ -7,7 +7,7 @@ set(GSCF_SOURCES
 
 # Dump the current version as an include file.
 include_linalgwrap_cmake_module(WriteVersionHeader)
-write_version_header("${CMAKE_CURRENT_BINARY_DIR}/version_defs.hh")
+write_version_header("${CMAKE_BINARY_DIR}/src/gscf/version_defs.hh")
 
 # Add the libraries for Debug and Release builds:
 drb_add_library(gscf

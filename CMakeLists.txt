@@ -27,8 +27,8 @@ cmake_policy(SET CMP0048 NEW)
 project(gscf VERSION 0.0.0)
 
 # Global include directories for this project:
-include_directories("${gscf_SOURCE_DIR}/src")
-include_directories("${gscf_BINARY_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_BINARY_DIR}/src")
 
 # enable testing of this project
 enable_testing()

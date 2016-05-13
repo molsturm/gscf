@@ -25,7 +25,12 @@ set(GSCF_DEFINITIONS_RELEASE "")
 ##################
 #-- linalgwrap --#
 ##################
-include(cmake/findLinalgwrap.cmake)
+if (TARGET ${linalgwrap_DEBUG_TARGET} OR TARGET ${linalgwrap_RELEASE_TARGET})
+	# If the targets are already defined elsewhere, we are done:
+	message(STATUS "Using linalgwrap library provided by build environment.")
+else()
+	include(cmake/findLinalgwrap.cmake)
+endif()
 
 # Check that all required targets are available.
 foreach(build ${DRB_BUILD_TYPES})
@@ -44,37 +49,30 @@ endforeach()
 #-- catch  --#
 ##############
 if(GSCF_ENABLE_TESTS)
-	add_library(catch INTERFACE)
-	find_path(catch_INCLUDE_DIR catch.hpp
-		PATHS
-		$ENV{catch_INCLUDE_DIR}
-		${CMAKE_SOURCE_DIR}/../linalgwrap/external/catch/include
-		DOC "catch include directory"
-	)
-
-	if ("${catch_INCLUDE_DIR}" STREQUAL "catch_INCLUDE_DIR-NOTFOUND")
-		message(FATAL_ERROR "Could not find catch include directory. 
-Either disable testing of gscf by setting GSCF_ENABLE_TESTS to OFF \
-or provide a hint where the catch include file can be found via \
-the environment variable catch_INCLUDE_DIR.")
+	if (TARGET common_catch)
+		MESSAGE(STATUS "Using catch provided by build enviroment.")
+		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} common_catch)
+	else()
+		include(cmake/findCatch.cmake)
+		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} Upstream::catch)
 	endif()
 
-	message(STATUS "Found catch at ${catch_INCLUDE_DIR}/catch.hpp")
-
-	target_include_directories(catch INTERFACE ${catch_INCLUDE_DIR})
-	set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} catch)
 endif()
 
 ##################
 #-- rapidcheck --#
 ##################
 if(GSCF_ENABLE_TESTS)
-	find_package(rapidcheck REQUIRED CONFIG 
-		PATHS 
-		${CMAKE_SOURCE_DIR}/../linalgwrap/build
-	)
+	if (TARGET common_rapidcheck)
+		MESSAGE(STATUS "Using rapidcheck provided by build environment.")
+		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} rapidcheck)
+	else()
+		find_package(rapidcheck REQUIRED CONFIG 
+			PATHS 
+			${gscf_SOURCE_DIR}/../linalgwrap/build
+		)
 
-	message(STATUS "Found rapidcheck config at ${rapidcheck_CONFIG}")
-
-	set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} Upstream::rapidcheck)
+		message(STATUS "Found rapidcheck config at ${rapidcheck_CONFIG}")
+		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} Upstream::rapidcheck)
+	endif()
 endif()

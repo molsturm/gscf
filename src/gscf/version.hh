@@ -28,12 +28,12 @@
 namespace gscf {
 
 struct version {
-    static int constexpr major{gscf_VERSION_MAJOR};
-    static int constexpr minor{gscf_VERSION_MINOR};
-    static int constexpr patch{gscf_VERSION_PATCH};
+  static int constexpr major{gscf_VERSION_MAJOR};
+  static int constexpr minor{gscf_VERSION_MINOR};
+  static int constexpr patch{gscf_VERSION_PATCH};
 
-    // Return the version as a string
-    static std::string version_string();
+  // Return the version as a string
+  static std::string version_string();
 };
 
 }  // namespace gscf

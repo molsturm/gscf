@@ -1,10 +1,11 @@
 #pragma once
 #include <cstddef>
 #include <string>
-namespace gscf {
 
+namespace gscf {
 class IterationState {
 public:
+  //! Type for counting iteration numbers.
   typedef size_t count_type;
 
   /** \brief Default constructor

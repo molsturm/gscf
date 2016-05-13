@@ -1,20 +1,46 @@
 #pragma once
 #include "IterationControl.hh"
+#include "ScfStateBase.hh"
 
 namespace gscf {
 
-/** Class to provide the basic set of paramters the ScfBase class needs.
+/** \brief Class to provide the basic set of parameters and the convergence
+ *  checks the ScfBase class needs.
+ *
+ *  Consider overriding the is_converged function to provide a convergence
+ *  check.
+ *
+ * \tparam ScfState The type of the scf state. Via the type traits underlying
+ *         the scf state the neccessary types for this class are also
+ *         determined.
  *
  * \see gscf::ScfBase
  */
-template <typename ScfTraits>
-struct ScfControlBase : public IterationControl {
-  typedef ScfTraits scf_traits_type;
-  typedef typename scf_traits_type::probmat_type probmat_type;
-  typedef typename scf_traits_type::scalar_type scalar_type;
-  typedef typename scf_traits_type::size_type size_type;
-  typedef typename scf_traits_type::matrix_type matrix_type;
-  typedef typename scf_traits_type::vector_type vector_type;
+template <typename ScfState>
+struct ScfControlBase : public IterationControl<ScfState> {
+  typedef IterationControl<ScfState> base_type;
+  typedef typename base_type::it_state_type scf_state_type;
+
+  /** \name Types forwarded from ScfState */
+  ///@{
+  /** The type of the problem matrix as determined by the traits */
+  typedef typename scf_state_type::probmat_type probmat_type;
+
+  /** The type of the scalars as determined by the traits */
+  typedef typename scf_state_type::scalar_type scalar_type;
+
+  /** The type of the size indices as determined by the traits */
+  typedef typename scf_state_type::size_type size_type;
+
+  /** The type of the stored matrices as determined by the traits */
+  typedef typename scf_state_type::matrix_type matrix_type;
+
+  /** The type of the stored vectors as determined by the traits */
+  typedef typename scf_state_type::vector_type vector_type;
+  ///@}
+
+  static_assert(IsScfState<ScfState>::value,
+                "ScfState needs to be derived off ScfStateBase.");
 
   /** The number of eigenpairs to calculate in the SCF procedure */
   size_type n_eigenpairs;
@@ -26,7 +52,7 @@ struct ScfControlBase : public IterationControl {
    * \param max_iter_        The maximum number of iterations to perform.
    * */
   ScfControlBase(size_type n_eigenpairs_, size_type max_iter_)
-        : IterationControl(max_iter_), n_eigenpairs(n_eigenpairs_){};
+        : base_type(max_iter_), n_eigenpairs(n_eigenpairs_){};
 };
 
 }  // gscf

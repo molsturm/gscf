@@ -1,6 +1,7 @@
 #pragma once
 #include "IterationState.hh"
 #include <linalgwrap/SubscriptionPointer.hh>
+#include <linalgwrap/VectorOf.hh>
 #include <linalgwrap/type_utils.hh>
 #include <memory>
 
@@ -10,77 +11,88 @@ namespace gscf {
  *
  * Provides the most basic state of each SCF, the current problem matrix,
  * the current eigenpairs.
+ *
+ * \tparam ProblemMatrix The type of the Problem matrix object.
  */
-template <typename ScfTraits>
+template <typename ProblemMatrix>
 class ScfStateBase : public IterationState {
-  public:
-    typedef ScfTraits scf_traits_type;
-    typedef typename scf_traits_type::probmat_type probmat_type;
-    typedef typename scf_traits_type::scalar_type scalar_type;
-    typedef typename scf_traits_type::size_type size_type;
-    typedef typename scf_traits_type::matrix_type matrix_type;
-    typedef typename scf_traits_type::vector_type vector_type;
+public:
+  /** \name Type definitions */
+  ///@{
+  /** The type of the problem matrix as determined by the traits */
+  typedef ProblemMatrix probmat_type;
 
-    /** Get the overlap matrix of thc SCF problem */
-    const matrix_type overlap_matrix() const { return *m_overlap_matrix_ptr; }
+  /** The type of the scalars as determined by the traits */
+  typedef typename probmat_type::scalar_type scalar_type;
 
-    /** Constant access to the current problem matrix */
-    const std::shared_ptr<const probmat_type> problem_matrix_ptr() const {
-        return m_problem_matrix_ptr;
-    }
+  /** The type of the size indices as determined by the traits */
+  typedef typename probmat_type::size_type size_type;
 
-    /** Access to the current problem matrix */
-    std::shared_ptr<probmat_type>& problem_matrix_ptr() {
-        return m_problem_matrix_ptr;
-    }
+  /** The type of the stored matrices as determined by the traits */
+  typedef typename probmat_type::stored_matrix_type matrix_type;
 
-    /** Constant access to the current eigenvector matrix */
-    const std::shared_ptr<const matrix_type> eigenvectors_ptr() const {
-        return m_eigenvectors_ptr;
-    }
+  /** The type of the stored vectors as determined by the traits */
+  typedef linalgwrap::VectorOf<matrix_type> vector_type;
+  ///@}
 
-    /** Access to the current eigenvector matrix */
-    std::shared_ptr<matrix_type>& eigenvectors_ptr() {
-        return m_eigenvectors_ptr;
-    }
+  /** Get the overlap matrix of thc SCF problem */
+  const matrix_type overlap_matrix() const { return *m_overlap_matrix_ptr; }
 
-    /** Constant access to the current eigenvalues */
-    const std::shared_ptr<const vector_type> eigenvalues_ptr() const {
-        return m_eigenvalues_ptr;
-    }
+  /** Constant access to the current problem matrix */
+  const std::shared_ptr<const probmat_type> problem_matrix_ptr() const {
+    return m_problem_matrix_ptr;
+  }
 
-    /** Access to the current eigenvalues */
-    std::shared_ptr<vector_type>& eigenvalues_ptr() {
-        return m_eigenvalues_ptr;
-    }
+  /** Access to the current problem matrix */
+  std::shared_ptr<probmat_type>& problem_matrix_ptr() {
+    return m_problem_matrix_ptr;
+  }
 
-    /** \brief Constructor
-     *
-     * Initialise the scf state from a problem matrix and a overlap matrix.
-     *
-     * All other entities are given some sensible results, e.g. the
-     * eigenvectors and the eigenvalues pointers are set to nullptr.
-     * */
-    ScfStateBase(probmat_type prob_mat, const matrix_type& overlap_mat)
-          : m_overlap_matrix_ptr{linalgwrap::make_subscription(overlap_mat,
-                                                              "ScfState")},
-            m_problem_matrix_ptr{
-                  std::make_shared<probmat_type>(std::move(prob_mat))},
-            m_eigenvectors_ptr{nullptr},
-            m_eigenvalues_ptr{nullptr} {}
+  /** Constant access to the current eigenvector matrix */
+  const std::shared_ptr<const matrix_type> eigenvectors_ptr() const {
+    return m_eigenvectors_ptr;
+  }
 
-  private:
-    //! The overlap matrix of the SCF problem.
-    linalgwrap::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
+  /** Access to the current eigenvector matrix */
+  std::shared_ptr<matrix_type>& eigenvectors_ptr() {
+    return m_eigenvectors_ptr;
+  }
 
-    //! The current problem matrix
-    std::shared_ptr<probmat_type> m_problem_matrix_ptr;
+  /** Constant access to the current eigenvalues */
+  const std::shared_ptr<const vector_type> eigenvalues_ptr() const {
+    return m_eigenvalues_ptr;
+  }
 
-    //! The current set of eigenvectors of the operator
-    std::shared_ptr<matrix_type> m_eigenvectors_ptr;
+  /** Access to the current eigenvalues */
+  std::shared_ptr<vector_type>& eigenvalues_ptr() { return m_eigenvalues_ptr; }
 
-    //! The current eigenvalues of the operator
-    std::shared_ptr<vector_type> m_eigenvalues_ptr;
+  /** \brief Constructor
+   *
+   * Initialise the scf state from a problem matrix and a overlap matrix.
+   *
+   * All other entities are given some sensible results, e.g. the
+   * eigenvectors and the eigenvalues pointers are set to nullptr.
+   * */
+  ScfStateBase(probmat_type prob_mat, const matrix_type& overlap_mat)
+        : m_overlap_matrix_ptr{linalgwrap::make_subscription(overlap_mat,
+                                                             "ScfState")},
+          m_problem_matrix_ptr{
+                std::make_shared<probmat_type>(std::move(prob_mat))},
+          m_eigenvectors_ptr{nullptr},
+          m_eigenvalues_ptr{nullptr} {}
+
+private:
+  //! The overlap matrix of the SCF problem.
+  linalgwrap::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
+
+  //! The current problem matrix
+  std::shared_ptr<probmat_type> m_problem_matrix_ptr;
+
+  //! The current set of eigenvectors of the operator
+  std::shared_ptr<matrix_type> m_eigenvectors_ptr;
+
+  //! The current eigenvalues of the operator
+  std::shared_ptr<vector_type> m_eigenvalues_ptr;
 };
 
 //@{
@@ -94,8 +106,8 @@ template <typename T, typename = void>
 struct IsScfState : public std::false_type {};
 
 template <typename T>
-struct IsScfState<T, linalgwrap::void_t<typename T::scf_traits_type>>
-      : public std::is_base_of<ScfStateBase<typename T::scf_traits_type>, T> {};
+struct IsScfState<T, linalgwrap::void_t<typename T::probmat_type>>
+      : public std::is_base_of<ScfStateBase<typename T::probmat_type>, T> {};
 //@}
 
 }  // gscf

@@ -33,7 +33,7 @@ else()
 endif()
 
 # Check that all required targets are available.
-foreach(build "${DRB_BUILD_TYPES}")
+foreach(build ${DRB_BUILD_TYPES})
 	if(NOT TARGET "${linalgwrap_${build}_TARGET}")
 		message(FATAL_ERROR "We could not find a ${build} version of linalwrap at this location. \
 Either disable building a ${build} version of ${CMAKE_PROJECT_NAME} or else \

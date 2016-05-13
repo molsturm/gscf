@@ -4,7 +4,7 @@
 # automatically.
 #
 
-add_library(Upstream::catch INTERFACE)
+add_library(Upstream::catch INTERFACE IMPORTED)
 find_path(catch_INCLUDE_DIR catch.hpp
 	PATHS
 	$ENV{catch_INCLUDE_DIR}
@@ -20,4 +20,4 @@ the environment variable catch_INCLUDE_DIR.")
 endif()
 
 message(STATUS "Found catch at ${catch_INCLUDE_DIR}/catch.hpp")
-target_include_directories(Upstream::catch INTERFACE ${catch_INCLUDE_DIR})
+include_directories(${catch_INCLUDE_DIR})

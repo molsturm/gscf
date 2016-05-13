@@ -25,7 +25,7 @@ set(GSCF_DEFINITIONS_RELEASE "")
 ##################
 #-- linalgwrap --#
 ##################
-if (TARGET ${linalgwrap_DEBUG_TARGET} OR TARGET ${linalgwrap_RELEASE_TARGET})
+if (TARGET "${linalgwrap_DEBUG_TARGET}" OR TARGET "${linalgwrap_RELEASE_TARGET}")
 	# If the targets are already defined elsewhere, we are done:
 	message(STATUS "Using linalgwrap library provided by build environment.")
 else()
@@ -33,7 +33,7 @@ else()
 endif()
 
 # Check that all required targets are available.
-foreach(build ${DRB_BUILD_TYPES})
+foreach(build "${DRB_BUILD_TYPES}")
 	if(NOT TARGET "${linalgwrap_${build}_TARGET}")
 		message(FATAL_ERROR "We could not find a ${build} version of linalwrap at this location. \
 Either disable building a ${build} version of ${CMAKE_PROJECT_NAME} or else \

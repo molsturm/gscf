@@ -2,7 +2,7 @@
 # The sources for the test executable
 #
 set(GSCF_TESTS_SOURCES
-	DummyTest.cc
+	CircularBufferTests.cc
 	main.cc
 )
 

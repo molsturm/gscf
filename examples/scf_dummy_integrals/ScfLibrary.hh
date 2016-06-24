@@ -56,17 +56,19 @@ struct PlainScfHartreeFockControl : public PlainScfControl<ScfState> {
 
 template <typename FockType>
 class PlainScfHartreeFock
-      : public PlainScf<FockType, PlainScfHartreeFockState<FockType>> {
+      : public PlainScf<FockType, PlainScfHartreeFockState<FockType>,
+                        PlainScfControl<PlainScfHartreeFockState<FockType>>> {
 public:
   typedef FockType fock_type;
-  typedef PlainScf<FockType, PlainScfHartreeFockState<FockType>> base_type;
+  typedef PlainScf<FockType, PlainScfHartreeFockState<FockType>,
+                   PlainScfControl<PlainScfHartreeFockState<FockType>>>
+        base_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::scf_state_type scf_state_type;
   typedef PlainScfHartreeFockControl<scf_state_type> scf_control_type;
 
-  PlainScfHartreeFock(scf_control_type& scf_control,
-                      linalgwrap::io::DataWriter_i<scalar_type>& writer)
-        : base_type(scf_control), m_writer(writer) {}
+  PlainScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
+        : m_writer(writer) {}
 
 protected:
   void before_iteration_step(scf_state_type& s) const override {
@@ -103,7 +105,8 @@ protected:
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(problem_matrix.are_hf_terms_stored(),
-               ExcInvalidState("problem matrix does not store HF terms."));
+               linalgwrap::ExcInvalidState(
+                     "problem matrix does not store HF terms."));
     m_writer.write("pa" + itstr, problem_matrix.hf_terms().pa_bb);
     m_writer.write("pb" + itstr, problem_matrix.hf_terms().pb_bb);
     m_writer.write("j" + itstr, problem_matrix.hf_terms().j_bb);

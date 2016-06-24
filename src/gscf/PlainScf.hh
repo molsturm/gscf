@@ -32,7 +32,7 @@ struct PlainScfState : public ScfStateBase<ProblemMatrix> {
  *  convergence check. This version just returns false, i.e. never
  *  converges. The signature is
  *  ```
- *  bool is_converged(const scf_state_type&);
+ *  bool is_converged(const scf_state_type&) const;
  *  ```
  *  Note that this function is called *after* the end_iteration_step
  *  handler.
@@ -61,15 +61,17 @@ struct PlainScfControl : public ScfControlBase<ScfState> {
  * \tparam ProblemMatrix  The type of the problem matrix to be solved
  * \tparam ScfState       The precise scf state type which is available
  *                        to is_converged and all handler functions.
+ * \tparam ScfControl     The scf control type which contains parameters
+ *                        as well as functionality to check convergence.
  */
 template <typename ProblemMatrix,
-          typename ScfState = PlainScfState<ProblemMatrix>>
-class PlainScf : public ScfBase<ScfState> {
+          typename ScfState = PlainScfState<ProblemMatrix>,
+          typename ScfControl = PlainScfControl<ProblemMatrix>>
+class PlainScf : public ScfBase<ScfState, ScfControl> {
 public:
-  typedef ScfBase<ScfState> base_type;
+  typedef ScfBase<ScfState, ScfControl> base_type;
   typedef typename base_type::scf_state_type scf_state_type;
 
-  typedef PlainScfControl<scf_state_type> scf_control_type;
   typedef typename scf_state_type::probmat_type probmat_type;
   typedef typename scf_state_type::scalar_type scalar_type;
   typedef typename scf_state_type::size_type size_type;
@@ -83,42 +85,42 @@ public:
   /** Run a Plain SCF eigenproblem with the provided problem matrix
    *  and overlap matrix and return the final state.
    *
+   * \param assert_nofail If set to true, any exception indicating convergence
+   * failure will be passed upwards, else it will be suppressed.
+   * In this case the fail message of the returned state gives valuable
+   * information why the iteration failed.
+   *
    * \note The returned state contains information on whether the SCF
-   * converged or failed. If one wants to assert automatically that
-   * the SCF converged, use solve_assert instead.
-   *  */
+   * converged or failed.
+   **/
   scf_state_type solve(probmat_type probmat_bb,
-                       const matrix_type& overlapmat_bb) const override;
-
-  PlainScf(const scf_control_type& scf_control);
-
-private:
-  linalgwrap::SubscriptionPointer<const scf_control_type> m_scf_control_ptr;
+                       const matrix_type& overlapmat_bb,
+                       bool assert_nofail = true) const override;
 };
 
-template <typename ProblemMatrix, typename ScfState>
-typename PlainScf<ProblemMatrix, ScfState>::scf_state_type
-PlainScf<ProblemMatrix, ScfState>::solve(
-      probmat_type probmat_bb, const matrix_type& overlapmat_bb) const {
+template <typename ProblemMatrix, typename ScfState, typename ScfControl>
+typename PlainScf<ProblemMatrix, ScfState, ScfControl>::scf_state_type
+PlainScf<ProblemMatrix, ScfState, ScfControl>::solve(
+      probmat_type probmat_bb, const matrix_type& overlapmat_bb,
+      bool assert_nofail) const {
   // Construct new state:
   scf_state_type state(std::move(probmat_bb), overlapmat_bb);
 
-  // Iterate:
-  while (!state.is_failed() && !m_scf_control_ptr->is_converged(state)) {
-    base_type::start_iteration_step(state);
-    base_type::solve_eigensystem(state);
-    base_type::update_problem_matrix(state);
-    base_type::end_iteration_step(state);
+  try {
+    // Iterate:
+    while (!base_type::is_converged(state)) {
+      base_type::start_iteration_step(state);
+      base_type::solve_eigensystem(state);
+      base_type::update_problem_matrix(state);
+      base_type::end_iteration_step(state);
+    }
+  } catch (ExcScfFailedToConverge& e) {
+    if (assert_nofail) throw;
+    return state;
   }
 
   // Return the final state
   return state;
 }
-
-template <typename ProblemMatrix, typename ScfState>
-PlainScf<ProblemMatrix, ScfState>::PlainScf(const scf_control_type& scf_control)
-      : base_type{scf_control},
-        m_scf_control_ptr{
-              linalgwrap::make_subscription(scf_control, "PlainScf")} {}
 
 }  // gscf

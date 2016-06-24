@@ -45,6 +45,10 @@ struct ScfControlBase : public IterationControl<ScfState> {
   /** The number of eigenpairs to calculate in the SCF procedure */
   size_type n_eigenpairs;
 
+  /** The key used to pass the new eigenvector coefficients to the
+   * non-linear problem matrix within the update_problem_matrix step. */
+  std::string update_key = "evec_coefficients";
+
   /** Construct an ScfControlBase object and set some defaults
    *
    * \param n_eigenpairs_    Number of eigenpairs to compute
@@ -54,5 +58,21 @@ struct ScfControlBase : public IterationControl<ScfState> {
   ScfControlBase(size_type n_eigenpairs_, size_type max_iter_)
         : base_type(max_iter_), n_eigenpairs(n_eigenpairs_){};
 };
+
+//@{
+/** \brief struct representing a type (std::true_type, std::false_type) which
+ *  indicates whether T is derived from ScfControlBase
+ *
+ * The definition is done using SFINAE, such that even for types not having a
+ * typedef scalar_type this expression is valid.
+ *  */
+template <typename T, typename = void>
+struct IsScfControl : public std::false_type {};
+
+template <typename T>
+struct IsScfControl<T, linalgwrap::void_t<typename T::scf_state_type>>
+      : public std::is_base_of<ScfControlBase<typename T::scf_state_type>, T> {
+};
+//@}
 
 }  // gscf

@@ -36,7 +36,7 @@ public:
   ///@}
 
   /** Get the overlap matrix of thc SCF problem */
-  const matrix_type overlap_matrix() const { return *m_overlap_matrix_ptr; }
+  const matrix_type& overlap_matrix() const { return *m_overlap_matrix_ptr; }
 
   /** Constant access to the current problem matrix */
   const std::shared_ptr<const probmat_type> problem_matrix_ptr() const {

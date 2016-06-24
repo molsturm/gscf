@@ -2,6 +2,7 @@
 # set the source files.
 #
 set(GSCF_SOURCES
+	ExcScfFailedToConverge.cc
 	version.cc
 )
 

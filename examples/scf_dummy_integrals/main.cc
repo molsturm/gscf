@@ -41,6 +41,7 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
 
   bool store_terms = true;
   fock_type fock{n_alpha, n_beta, idata, guess, store_terms};
+  debugout.write("guessfock", fock);
 
   // Allocate SCF objects:
   PlainScfHartreeFock<decltype(fock)> scfhf(debugout);

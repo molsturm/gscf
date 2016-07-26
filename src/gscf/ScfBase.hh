@@ -72,10 +72,10 @@ public:
   ///@}
 
   /** Access scf control read-only */
-  const scf_control_type scf_control() const;
+  const scf_control_type& scf_control() const;
 
   /** Access scf control read-write */
-  scf_control_type scf_control();
+  scf_control_type& scf_control();
 
 protected:
   /** \name Handler functions
@@ -189,13 +189,13 @@ ScfBase<ScfState, ScfControl>::solve(const scf_state_type& old_state,
 }
 
 template <typename ScfState, typename ScfControl>
-const typename ScfBase<ScfState, ScfControl>::scf_control_type
+const typename ScfBase<ScfState, ScfControl>::scf_control_type&
 ScfBase<ScfState, ScfControl>::scf_control() const {
   return m_scf_control;
 }
 
 template <typename ScfState, typename ScfControl>
-typename ScfBase<ScfState, ScfControl>::scf_control_type
+typename ScfBase<ScfState, ScfControl>::scf_control_type&
 ScfBase<ScfState, ScfControl>::scf_control() {
   return m_scf_control;
 }
@@ -255,10 +255,11 @@ void ScfBase<ScfState, ScfControl>::solve_eigensystem(scf_state_type& s) const {
 
   // Do eigenproblem:
   // TODO Take the number of eigenpairs requested into account here
-  bool res = detail::eig_sym_hack(*s.problem_matrix_ptr(), s.overlap_matrix(),
-                                  *new_eigenvectors_ptr, *new_eigenvalues_ptr);
+  bool success =
+        detail::eig_sym_hack(*s.problem_matrix_ptr(), s.overlap_matrix(),
+                             *new_eigenvectors_ptr, *new_eigenvalues_ptr);
 
-  if (!res) {
+  if (!success) {
     fail_scf(s, ScfFailReason::ReasonId::INNER_EIGENSOLVER_FAILED);
     return;
   }

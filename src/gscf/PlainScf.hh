@@ -66,7 +66,7 @@ struct PlainScfControl : public ScfControlBase<ScfState> {
  */
 template <typename ProblemMatrix,
           typename ScfState = PlainScfState<ProblemMatrix>,
-          typename ScfControl = PlainScfControl<ProblemMatrix>>
+          typename ScfControl = PlainScfControl<ScfState>>
 class PlainScf : public ScfBase<ScfState, ScfControl> {
 public:
   typedef ScfBase<ScfState, ScfControl> base_type;

@@ -26,6 +26,9 @@ struct ScfControlBase : public IterationControl<ScfState> {
   /** The type of the problem matrix as determined by the traits */
   typedef typename scf_state_type::probmat_type probmat_type;
 
+  /** The type of the problem matrix as determined by the traits */
+  typedef typename scf_state_type::diagmat_type diagmat_type;
+
   /** The type of the scalars as determined by the traits */
   typedef typename scf_state_type::scalar_type scalar_type;
 

@@ -31,6 +31,7 @@ public:
   typedef ScfControl scf_control_type;
   typedef ScfState scf_state_type;
   typedef typename scf_state_type::probmat_type probmat_type;
+  typedef typename scf_state_type::diagmat_type diagmat_type;
   typedef typename scf_state_type::scalar_type scalar_type;
   typedef typename scf_state_type::size_type size_type;
   typedef typename scf_state_type::matrix_type matrix_type;
@@ -116,6 +117,12 @@ protected:
   /** Construct an ScfBase object. */
   ScfBase() : m_scf_control{} {}
 
+  virtual ~ScfBase() = default;
+  ScfBase(const ScfBase&) = default;
+  ScfBase(ScfBase&&) = default;
+  ScfBase& operator=(const ScfBase&) = default;
+  ScfBase& operator=(ScfBase&&) = default;
+
   /** \name Scf building blocks.
    * Various virtual handler functions, which are called when
    * certain events happen.
@@ -141,17 +148,18 @@ protected:
   void fail_scf(scf_state_type& s, const ScfFailReason& fail_reason) const;
 
   /** \brief Solve the eigensystem currently represented by the
-   *  SCF state and place results back inside the state
+   *  diagonalised_matrix_ptr and the overlap_matrix of the SCF state
+   *  and place results back inside the state.
    *
-   *  After everything is done, we call the update_eigenpair_handler.
+   *  After everything is done, we call the on_update_eigenpairs.
    *
    *  Notice, that we just re-assign the shared pointers
    *  and that their magic is in charge for cleaning up
    *  unused storage automatically.
    */
-  void solve_eigensystem(scf_state_type& s) const;
+  void update_eigenpairs(scf_state_type& s) const;
 
-  /** Update the problem matrix and replace the current
+  /** \brief Update the problem matrix and replace the current
    *  one in the SCF state.
    *
    *  Notice, that we just re-assign the shared pointers
@@ -233,31 +241,38 @@ void ScfBase<ScfState, ScfControl>::fail_scf(
 }
 
 template <typename ScfState, typename ScfControl>
-void ScfBase<ScfState, ScfControl>::solve_eigensystem(scf_state_type& s) const {
+void ScfBase<ScfState, ScfControl>::update_eigenpairs(scf_state_type& s) const {
   // Assert that SCF is not failed.
   assert_dbg(!s.is_failed(),
              linalgwrap::ExcInvalidState(
                    ("SCF has failed, reason: " + s.fail_reason()).c_str()));
 
+  assert_dbg(s.diagonalised_matrix_ptr() != nullptr,
+             linalgwrap::ExcInvalidState("update_eigenpairs needs a valid "
+                                         "matrix pointer inside "
+                                         "s.diagonalised_matrix_ptr"));
+
+  const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
+
   // The number of eigenpairs to compute:
   size_type n_eigenpairs = m_scf_control.n_eigenpairs;
   if (n_eigenpairs == IterationConstants<size_type>::all) {
     // Compute all eigenpairs:
-    n_eigenpairs = s.problem_matrix_ptr()->n_cols();
+    n_eigenpairs = diagmat.n_cols();
   }
 
-  assert_greater_equal(n_eigenpairs, s.problem_matrix_ptr()->n_cols());
+  assert_greater_equal(n_eigenpairs, diagmat.n_cols());
 
   // Containers for the new eigenpairs:
-  auto new_eigenvectors_ptr = std::make_shared<matrix_type>(
-        s.problem_matrix_ptr()->n_rows(), n_eigenpairs);
+  auto new_eigenvectors_ptr =
+        std::make_shared<matrix_type>(diagmat.n_rows(), n_eigenpairs);
   auto new_eigenvalues_ptr = std::make_shared<vector_type>(n_eigenpairs);
 
   // Do eigenproblem:
   // TODO Take the number of eigenpairs requested into account here
   bool success =
-        detail::eig_sym_hack(*s.problem_matrix_ptr(), s.overlap_matrix(),
-                             *new_eigenvectors_ptr, *new_eigenvalues_ptr);
+        detail::eig_sym_hack(diagmat, s.overlap_matrix(), *new_eigenvectors_ptr,
+                             *new_eigenvalues_ptr);
 
   if (!success) {
     fail_scf(s, ScfFailReason::ReasonId::INNER_EIGENSOLVER_FAILED);

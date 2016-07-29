@@ -13,9 +13,10 @@ namespace gscf {
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
 template <typename ProblemMatrix>
-struct PlainScfState : public ScfStateBase<ProblemMatrix> {
-  typedef ScfStateBase<ProblemMatrix> base_type;
+struct PlainScfState : public ScfStateBase<ProblemMatrix, ProblemMatrix> {
+  typedef ScfStateBase<ProblemMatrix, ProblemMatrix> base_type;
   typedef typename base_type::probmat_type probmat_type;
+  typedef typename base_type::diagmat_type diagmat_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::matrix_type matrix_type;
@@ -73,6 +74,7 @@ public:
   typedef typename base_type::scf_state_type scf_state_type;
 
   typedef typename scf_state_type::probmat_type probmat_type;
+  typedef typename scf_state_type::diagmat_type diagmat_type;
   typedef typename scf_state_type::scalar_type scalar_type;
   typedef typename scf_state_type::size_type size_type;
   typedef typename scf_state_type::matrix_type matrix_type;
@@ -110,8 +112,20 @@ PlainScf<ProblemMatrix, ScfState, ScfControl>::solve(
     // Iterate:
     while (!base_type::is_converged(state)) {
       base_type::start_iteration_step(state);
-      base_type::solve_eigensystem(state);
+
+      // Diagonalise the problem matrix
+      state.diagonalised_matrix_ptr() = state.problem_matrix_ptr();
+      base_type::update_eigenpairs(state);
+
+      // We free the extra pointer to the problem matrix object here
+      // such that the problem_matrix_ptr is the only guy pointing
+      // to it. This has the advantage that the update_problem_matrix
+      // does not need to do a copy of the object referred to by the
+      // problem_matrix_ptr, but it can just update the current one
+      // in-place.
+      state.diagonalised_matrix_ptr().reset();
       base_type::update_problem_matrix(state);
+
       base_type::end_iteration_step(state);
     }
   } catch (ExcScfFailedToConverge& e) {

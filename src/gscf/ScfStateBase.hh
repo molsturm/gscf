@@ -14,15 +14,20 @@ namespace gscf {
  *
  * \tparam ProblemMatrix The type of the Problem matrix object.
  */
-template <typename ProblemMatrix>
+template <typename ProblemMatrix, typename DiagonalisedMatrix = ProblemMatrix>
 class ScfStateBase : public IterationState {
 public:
   /** \name Type definitions */
   ///@{
-  /** The type of the problem matrix as determined by the traits */
+  /** The type of the problem matrix, i.e. the non-linear problem
+   *  we which to solve. */
   typedef ProblemMatrix probmat_type;
 
-  /** The type of the scalars as determined by the traits */
+  /** The type of the matrix to be diagonalised in order to obtain
+   *  the new eigenpairs in the SCF algorithm. */
+  typedef DiagonalisedMatrix diagmat_type;
+
+  /** The type of the scalars */
   typedef typename probmat_type::scalar_type scalar_type;
 
   /** The type of the size indices as determined by the traits */
@@ -38,14 +43,42 @@ public:
   /** Get the overlap matrix of thc SCF problem */
   const matrix_type& overlap_matrix() const { return *m_overlap_matrix_ptr; }
 
-  /** Constant access to the current problem matrix */
+  /** Constant access to the current problem matrix, i.e. the current
+   * approximation
+   *  to the self-consistent state we wish to obtain for the non-linear problem
+   *  in the end. */
   const std::shared_ptr<const probmat_type> problem_matrix_ptr() const {
     return m_problem_matrix_ptr;
   }
 
-  /** Access to the current problem matrix */
+  /** Access to the current problem matrix, i.e. the current approximation
+   *  to the self-consistent state we wish to obtain for the non-linear problem
+   *  in the end. */
   std::shared_ptr<probmat_type>& problem_matrix_ptr() {
     return m_problem_matrix_ptr;
+  }
+
+  /** \brief Constant access to the matrix which is diagonalised in order to
+   * obtain
+   * the new eigenpairs.
+   *
+   * \note This matrix may be identical to problem_matrix_ptr() for some
+   * algorithms
+   * (like PlainSCF), but may also me different (like in a DiisScf).
+   */
+  const std::shared_ptr<const diagmat_type> diagonalised_matrix_ptr() const {
+    return m_diagonalised_matrix;
+  }
+
+  /** \brief Access to the matrix which is diagonalised in order to obtain
+   * the new eigenpairs.
+   *
+   * \note This matrix may be identical to problem_matrix_ptr() for some
+   * algorithms
+   * (like PlainSCF), but may also me different (like in a DiisScf).
+   */
+  std::shared_ptr<diagmat_type>& diagonalised_matrix_ptr() {
+    return m_diagonalised_matrix;
   }
 
   /** Constant access to the current eigenvector matrix */
@@ -78,6 +111,7 @@ public:
                                                              "ScfState")},
           m_problem_matrix_ptr{
                 std::make_shared<probmat_type>(std::move(prob_mat))},
+          m_diagonalised_matrix{nullptr},
           m_eigenvectors_ptr{nullptr},
           m_eigenvalues_ptr{nullptr} {}
 
@@ -85,8 +119,15 @@ private:
   //! The overlap matrix of the SCF problem.
   linalgwrap::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
 
-  //! The current problem matrix
+  /** The current problem matrix as obtained as the approximation
+   *  to the self-consistent problem matrix in this step. **/
   std::shared_ptr<probmat_type> m_problem_matrix_ptr;
+
+  /** The current matrix used to obtain the eigenvectors
+   *  and eigenpairs. (Note that this may be identical to
+   *  m_problem_matrix_ptr like in a plain SCF, but may also be
+   *  different like in a DIIS-SCF */
+  std::shared_ptr<diagmat_type> m_diagonalised_matrix;
 
   //! The current set of eigenvectors of the operator
   std::shared_ptr<matrix_type> m_eigenvectors_ptr;
@@ -106,8 +147,11 @@ template <typename T, typename = void>
 struct IsScfState : public std::false_type {};
 
 template <typename T>
-struct IsScfState<T, linalgwrap::void_t<typename T::probmat_type>>
-      : public std::is_base_of<ScfStateBase<typename T::probmat_type>, T> {};
+struct IsScfState<
+      T, linalgwrap::void_t<typename T::probmat_type, typename T::diagmat_type>>
+      : public std::is_base_of<
+              ScfStateBase<typename T::probmat_type, typename T::diagmat_type>,
+              T> {};
 //@}
 
 }  // gscf

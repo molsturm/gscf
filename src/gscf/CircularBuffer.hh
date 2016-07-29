@@ -4,7 +4,7 @@
 #include <list>
 #include <memory>
 
-// TODO This should go into the krikra library!
+// TODO This should go into the krams library!
 namespace gscf {
 
 /** \name Class which allows to iterate between a range given by a start and end
@@ -107,7 +107,7 @@ public:
   //
   // Access range and position
   //
-  /** Get the current iteration range */
+  /** Get the iteration range as a pair of iterators marking start and end */
   std::pair<iterator_type, iterator_type> iteration_range() const;
 
   /** Get the iterator to the current position */

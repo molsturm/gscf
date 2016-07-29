@@ -44,7 +44,8 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   debugout.write("guessfock", fock);
 
   // Allocate SCF objects:
-  PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
+  // PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
+  DiisScfHartreeFock<decltype(fock)> scfhf(debugout);
   scfhf.solve(fock, idata.s_bb());
 }
 }  // namespace scf_dummy

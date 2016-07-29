@@ -144,6 +144,15 @@ public:
   /** Are the Hartree Fock terms stored? */
   bool are_hf_terms_stored() const;
 
+  /** Get the number of alpha electrons */
+  size_type n_alpha() const { return m_n_alpha; }
+
+  // TODO being able to access the above and below here feels wrong.
+  // but we need it for the error calculation.
+
+  /** Get the number of beta electrons */
+  size_type n_beta() const { return m_n_beta; }
+
 private:
   // Struct for the individual terms:
 
@@ -245,20 +254,10 @@ void FockMatrix<IntegralData>::update(const linalgwrap::ParameterMap& map) {
   // The coefficient key we look for:
   const std::string coeff_key = "evec_coefficients";
 
-  // The DIIS density update key we look for
-  const std::string diis_key = "diis_guess";
-
   if (map.exists(coeff_key)) {
     // We have new coefficients:
     const auto& coeff = map.at<stored_matrix_type>(coeff_key);
     build_fock_matrix_from_coefficient(coeff);
-  } else if (map.exists(diis_key)) {
-    assert_equal(m_n_beta, m_n_alpha);
-    // TODO change this type if we start using a different one
-    // (i.e. if we start to cover alpha != beta cases)
-    typedef stored_matrix_type diis_guess_type;
-    const auto& density_bb = map.at<diis_guess_type>(diis_key);
-    build_fock_matrix_from_density(density_bb, density_bb);
   }
 }
 

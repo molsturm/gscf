@@ -20,7 +20,9 @@ auto pulay_error(const Fock& fock_bb,
   using namespace linalgwrap;
 
   const size_type n_alpha = fock_bb.n_alpha();
+#ifdef DEBUG
   const size_type n_beta = fock_bb.n_beta();
+#endif
   assert_dbg(n_alpha == n_beta, linalgwrap::ExcNotImplemented());
 
   // Occupied coefficients

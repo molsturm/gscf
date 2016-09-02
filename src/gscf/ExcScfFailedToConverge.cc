@@ -12,7 +12,7 @@ std::string ScfFailReason::as_string() const {
       base = "Maximum number of iterations reached.";
       break;
     case ReasonId::DIIS_STEP_FAILED:
-      base = "The DIIS convergence accellerator step has failed.";
+      base = "The DIIS convergence accelerator step has failed.";
       break;
   }
 

@@ -21,58 +21,36 @@ set(GSCF_DEFINITIONS "")
 set(GSCF_DEFINITIONS_DEBUG "")
 set(GSCF_DEFINITIONS_RELEASE "")
 
+############################
+#-- rapidcheck and catch --#
+############################
+if(GSCF_ENABLE_TESTS)
+	# We need to setup rapidcheck and catch for the tests:
+	include(cmake/findRapidcheck.cmake)
+	set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} ${rapidcheck_TARGET})
+
+	include(cmake/findCatch.cmake)
+	set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} ${catch_TARGET})
+endif()
+
+#############
+#-- krims --#
+#############
+# Find at least version 0.0.0
+set(KRIMS_VERSION 0.0.0)
+include(cmake/findKrims.cmake)
+
+foreach (build ${DRB_BUILD_TYPES})
+	set(LINALGWRAP_DEPENDENCIES_${build} ${LINALGWRAP_DEPENDENCIES_${build}} ${krims_${build}_TARGET})
+endforeach()
 
 ##################
 #-- linalgwrap --#
 ##################
-if (TARGET "${linalgwrap_DEBUG_TARGET}" OR TARGET "${linalgwrap_RELEASE_TARGET}")
-	# If the targets are already defined elsewhere, we are done:
-	message(STATUS "Using linalgwrap library provided by build environment.")
-else()
-	include(cmake/findLinalgwrap.cmake)
-endif()
+# Find at least version 0.2.0
+set(LINALGWRAP_VERSION 0.2.0)
+include(cmake/findLinalgwrap.cmake)
 
-# Check that all required targets are available.
-foreach(build ${DRB_BUILD_TYPES})
-	if(NOT TARGET "${linalgwrap_${build}_TARGET}")
-		message(FATAL_ERROR "We could not find a ${build} version of linalwrap at this location. \
-Either disable building a ${build} version of ${CMAKE_PROJECT_NAME} or else \
-rebuild linalgwrap with a ${build} version as well.")
-	endif()
-
-	# Add dependencies to appropriate versions of gscf
+foreach (build ${DRB_BUILD_TYPES})
 	set(GSCF_DEPENDENCIES_${build} ${GSCF_DEPENDENCIES_${build}} ${linalgwrap_${build}_TARGET})
 endforeach()
-
-
-##############
-#-- catch  --#
-##############
-if(GSCF_ENABLE_TESTS)
-	if (TARGET common_catch)
-		MESSAGE(STATUS "Using catch provided by build enviroment.")
-		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} common_catch)
-	else()
-		include(cmake/findCatch.cmake)
-		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} Upstream::catch)
-	endif()
-
-endif()
-
-##################
-#-- rapidcheck --#
-##################
-if(GSCF_ENABLE_TESTS)
-	if (TARGET common_rapidcheck)
-		MESSAGE(STATUS "Using rapidcheck provided by build environment.")
-		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} rapidcheck)
-	else()
-		find_package(rapidcheck REQUIRED CONFIG 
-			PATHS 
-			${gscf_SOURCE_DIR}/../linalgwrap/build
-		)
-
-		message(STATUS "Found rapidcheck config at ${rapidcheck_CONFIG}")
-		set(GSCF_DEPENDENCIES_TEST ${GSCF_DEPENDENCIES_TEST} Upstream::rapidcheck)
-	endif()
-endif()

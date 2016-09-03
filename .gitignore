@@ -9,3 +9,9 @@
 
 # our build directory
 build
+
+# external projects
+external/.last_pull
+external/rapidcheck
+external/linalgwrap
+external/krims

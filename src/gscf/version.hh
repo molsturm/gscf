@@ -28,9 +28,9 @@
 namespace gscf {
 
 struct version {
-  static int constexpr major{gscf_VERSION_MAJOR};
-  static int constexpr minor{gscf_VERSION_MINOR};
-  static int constexpr patch{gscf_VERSION_PATCH};
+  static int constexpr major{detail::__version_var_major};
+  static int constexpr minor{detail::__version_var_minor};
+  static int constexpr patch{detail::__version_var_patch};
 
   // Return the version as a string
   static std::string version_string();

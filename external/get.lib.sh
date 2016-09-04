@@ -16,7 +16,7 @@ is_url_available() {
 	# The url to check
 	I_URL="$1"
 	# Extract hostname from FROM url
-	I_FROMHOST=`echo "$I_URL" | sed -r 's#^https?://([^/]+).*$#\1#'`
+	I_FROMHOST=`echo "$I_URL" | sed -r 's#^(https?|ssh|git)://([^@]+@)?([^/@:]+)(:[0-9]+)?.*$#\3#'`
 	if [ -z "$I_FROMHOST" ]; then
 		echo "Invalid url given to is_url_available"
 		exit 1

@@ -41,7 +41,7 @@ set(KRIMS_VERSION 0.0.0)
 include(cmake/findKrims.cmake)
 
 foreach (build ${DRB_BUILD_TYPES})
-	set(LINALGWRAP_DEPENDENCIES_${build} ${LINALGWRAP_DEPENDENCIES_${build}} ${krims_${build}_TARGET})
+	set(GSCF_DEPENDENCIES_${build} ${GSCF_DEPENDENCIES_${build}} ${krims_${build}_TARGET})
 endforeach()
 
 ##################

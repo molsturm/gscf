@@ -51,7 +51,19 @@ if ("${krims_DIR}" STREQUAL "krims_DIR-NOTFOUND")
 		add_subdirectory(${PROJECT_SOURCE_DIR}/external/krims)
 		include_directories(${PROJECT_SOURCE_DIR}/external/krims/src)
 
-		# TODO check version of krims!
+		# Extract version from CMakeLists.txt:
+		file(STRINGS "${PROJECT_SOURCE_DIR}/external/krims/CMakeLists.txt"
+			VERSION_RAW
+			REGEX "krims VERSION [0-9.]+"
+			LIMIT_COUNT 1)
+		string(REGEX MATCH "[0-9.]+" GOT_VERSION "${VERSION_RAW}")
+
+		# Compare against what is needed
+		if("${GOT_VERSION}" VERSION_LESS "${KRIMS_VERSION}")
+			message(FATAL_ERROR "Inconsistency in the repo: \
+Version ${KRIMS_VERSION} of krims was requested, but only version ${GOT_VERSION} \
+was found.")
+		endif()
 
 		return()
 	endif()

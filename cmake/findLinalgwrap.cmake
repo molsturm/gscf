@@ -47,7 +47,19 @@ if ("${linalgwrap_DIR}" STREQUAL "linalgwrap_DIR-NOTFOUND")
 		add_subdirectory(${PROJECT_SOURCE_DIR}/external/linalgwrap)
 		include_directories(${PROJECT_SOURCE_DIR}/external/linalgwrap/src)
 
-		# TODO check version of linalgwrap!
+		# Extract version from CMakeLists.txt:
+		file(STRINGS "${PROJECT_SOURCE_DIR}/external/linalgwrap/CMakeLists.txt"
+			VERSION_RAW
+			REGEX "linalgwrap VERSION [0-9.]+"
+			LIMIT_COUNT 1)
+		string(REGEX MATCH "[0-9.]+" GOT_VERSION "${VERSION_RAW}")
+
+		# Compare against what is needed
+		if("${GOT_VERSION}" VERSION_LESS "${LINALGWRAP_VERSION}")
+			message(FATAL_ERROR "Inconsistency in the repo: \
+Version ${LINALGWRAP_VERSION} of linalgwrap was requested, but only version ${GOT_VERSION} \
+was found.")
+		endif()
 
 		return()
 	endif()

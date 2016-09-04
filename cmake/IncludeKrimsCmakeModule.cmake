@@ -33,18 +33,14 @@ function(include_krims_cmake_module MODULE)
 
 	# First try to load it plainly as a module:
 	include(${MODULE} OPTIONAL RESULT_VARIABLE RES)
-
 	if (NOT "${RES}" STREQUAL "NOTFOUND")
-		message(STATUS "Found ${MODULE} file at ${RES}.")
 		return()
 	endif()
 
 	# We could not "just" find it. Try the krims_DIR hint:
 	include("$ENV{krims_DIR}/share/cmake/modules/${MODULE}.cmake"
 		OPTIONAL RESULT_VARIABLE RES)
-
 	if (NOT "${RES}" STREQUAL "NOTFOUND")
-		message(STATUS "Found ${MODULE} file at ${RES}")
 		return()
 	endif()
 

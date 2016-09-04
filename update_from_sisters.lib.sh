@@ -97,6 +97,8 @@ update_file() {
 	if [ ! -f "$FILE" -o "$FROMPATH" -nt "$FILE" ]; then
 		echo "Updating $FILE from $FROMPATH"
 		< "$FROMPATH" replace_header "$ORIGREPO"> "$FILE" || return 1
+		touch --reference="$FROMPATH" "$FILE"
+		chmod --reference="$FROMPATH" "$FILE"
 	fi
 	return 0
 }

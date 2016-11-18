@@ -1,7 +1,7 @@
 #pragma once
 #include <linalgwrap/SmallMatrix.hh>
 
-namespace scf_dummy {
+namespace gscfmock {
 
 /** Class for dummy integrals around an atom */
 class IntegralDataBase : public krims::Subscribable {
@@ -27,4 +27,4 @@ public:
    *  of shell pairs.*/
   virtual const matrix_type& i_bbbb() const = 0;
 };
-}  // namespace scf_dummy
+}  // namespace gscfmock

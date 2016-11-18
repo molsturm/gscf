@@ -1,42 +1,15 @@
 #pragma once
-#include "integrals/IntegralDataBase.hh"
 #include <gscf/PlainScf.hh>
 #include <gscf/PulayDiisScf.hh>
+#include <gscfmock/pulay_error.hh>
 #include <iostream>
 #include <iterator>
 #include <linalgwrap/io.hh>
 
-namespace scf_dummy {
+namespace dummy_scf {
 using namespace gscf;
 using namespace linalgwrap;
-
-template <typename Fock>
-auto pulay_error(
-      const Fock& fock_bb,
-      const MultiVector<const typename Fock::vector_type>& coefficients_bf,
-      const typename Fock::stored_matrix_type& overlap_bb) ->
-      typename Fock::stored_matrix_type {
-  typedef typename Fock::size_type size_type;
-
-  const size_type n_alpha = fock_bb.n_alpha();
-#ifdef DEBUG
-  const size_type n_beta = fock_bb.n_beta();
-#endif
-  assert_dbg(n_alpha == n_beta, krims::ExcNotImplemented());
-
-  // Occupied coefficients
-  auto ca_bo = coefficients_bf.subview(krims::range(n_alpha));
-
-  // Form first products (Factor of 2 since alpha == beta)
-  auto Sca_bo = 2. * overlap_bb * ca_bo;
-  auto Fca_bo = fock_bb * ca_bo;
-
-  // Form the antisymmetric outer product and return it.
-  // The idea is
-  // S * P * F - F * P * S == S * C * C^T * F - F * C * C^T * S
-  //                       == (S*C) * (F*C)^T - (F*C) * (S*C)^T
-  return outer_sum(Sca_bo, Fca_bo) - outer_sum(Fca_bo, Sca_bo);
-}
+using namespace gscfmock;
 
 template <typename FockType>
 class PlainScfHartreeFock : public PlainScf<FockType, PlainScfState<FockType>> {
@@ -71,6 +44,7 @@ public:
   //
   // Constructor
   // TODO not the way we would do it now
+  // => we need a way to feed the solver with a ParameterMap
   PlainScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
@@ -245,4 +219,4 @@ protected:
 private:
   linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
 };
-}
+}  // namespace dummy_scf

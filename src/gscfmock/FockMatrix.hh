@@ -1,10 +1,9 @@
 #pragma once
-#include "integrals/IntegralDataBase.hh"
+#include "Integrals/IntegralDataBase.hh"
 #include <linalgwrap/LazyMatrix_i.hh>
 #include <linalgwrap/io.hh>
 
-namespace scf_dummy {
-using namespace linalgwrap;
+namespace gscfmock {
 
 /** Struct to store the hf energies calculated in the FockMatrix class */
 template <typename Scalar>
@@ -66,14 +65,17 @@ struct HFTerms {
           kb_bb{nbas, nbas, zero} {}
 };
 
+/** Very simple and slow implementation of a Fock matrix class for a
+ * closed-shell System */
 template <typename IntegralData>
-class FockMatrix : public LazyMatrix_i<typename IntegralData::matrix_type> {
+class FockMatrix
+      : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix_type> {
   static_assert(std::is_base_of<IntegralDataBase, IntegralData>::value,
                 "IntegralData needs to be derived from IntegralDataBase");
 
 public:
   typedef IntegralData idata_type;
-  typedef LazyMatrix_i<typename idata_type::matrix_type> base_type;
+  typedef linalgwrap::LazyMatrix_i<typename idata_type::matrix_type> base_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::stored_matrix_type stored_matrix_type;
   typedef typename base_type::vector_type vector_type;
@@ -102,7 +104,7 @@ public:
    */
   FockMatrix(size_type n_alpha, size_type n_beta,
              const idata_type& integral_data,
-             const MultiVector<vector_type>& initial_guess_bf,
+             const linalgwrap::MultiVector<vector_type>& initial_guess_bf,
              bool store_hf_terms = false);
 
   /** Return the number of rows of the matrix */
@@ -122,12 +124,15 @@ public:
    *
    * Forward to stored fock matrix
    */
-  template <typename VectorIn, typename VectorOut,
-            mat_vec_apply_enabled_t<FockMatrix, VectorIn, VectorOut>...>
-  void apply(const MultiVector<VectorIn>& x, MultiVector<VectorOut>& y,
-             const Transposed mode = Transposed::None,
-             const scalar_type c_this = Constants<scalar_type>::one,
-             const scalar_type c_y = Constants<scalar_type>::zero) const {
+  template <
+        typename VectorIn, typename VectorOut,
+        linalgwrap::mat_vec_apply_enabled_t<FockMatrix, VectorIn, VectorOut>...>
+  void apply(const linalgwrap::MultiVector<VectorIn>& x,
+             linalgwrap::MultiVector<VectorOut>& y,
+             const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
+             const scalar_type c_this = linalgwrap::Constants<scalar_type>::one,
+             const scalar_type c_y =
+                   linalgwrap::Constants<scalar_type>::zero) const {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
 
@@ -135,12 +140,14 @@ public:
    *
    * Forward to stored fock matrix
    */
-  void apply(
-        const MultiVector<const MutableMemoryVector_i<scalar_type>>& x,
-        MultiVector<MutableMemoryVector_i<scalar_type>>& y,
-        const Transposed mode = Transposed::None,
-        const scalar_type c_this = Constants<scalar_type>::one,
-        const scalar_type c_y = Constants<scalar_type>::zero) const override {
+  void apply(const linalgwrap::MultiVector<
+                   const linalgwrap::MutableMemoryVector_i<scalar_type>>& x,
+             linalgwrap::MultiVector<
+                   linalgwrap::MutableMemoryVector_i<scalar_type>>& y,
+             const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
+             const scalar_type c_this = linalgwrap::Constants<scalar_type>::one,
+             const scalar_type c_y =
+                   linalgwrap::Constants<scalar_type>::zero) const override {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
 
@@ -161,7 +168,7 @@ public:
   void update(const krims::ParameterMap& map) override {
     if (map.exists(m_update_key)) {
       build_fock_matrix_from_coefficient(
-            map.at<MultiVector<vector_type>>(m_update_key));
+            map.at<linalgwrap::MultiVector<vector_type>>(m_update_key));
     }
   }
 
@@ -203,7 +210,7 @@ private:
 
   /** Build the Fock matrix from a coefficient */
   void build_fock_matrix_from_coefficient(
-        const MultiVector<vector_type>& coefficients_bf);
+        const linalgwrap::MultiVector<vector_type>& coefficients_bf);
 
   /** Build the Fock matrix from alpha and beta densities */
   void build_fock_matrix_from_density(stored_matrix_type pa_bb,
@@ -244,7 +251,8 @@ private:
 template <typename IntegralData>
 FockMatrix<IntegralData>::FockMatrix(
       size_type n_alpha, size_type n_beta, const idata_type& integral_data,
-      const MultiVector<vector_type>& initial_guess, bool store_hf_terms)
+      const linalgwrap::MultiVector<vector_type>& initial_guess,
+      bool store_hf_terms)
       : m_n_alpha{n_alpha},
         m_n_beta{n_beta},
         m_idata_ptr{krims::make_subscription(integral_data, "FockMatrix")},
@@ -404,7 +412,7 @@ void FockMatrix<IntegralData>::build_fock_matrix_from_density(
 
 template <typename IntegralData>
 void FockMatrix<IntegralData>::build_fock_matrix_from_coefficient(
-      const MultiVector<vector_type>& coefficients_bf) {
+      const linalgwrap::MultiVector<vector_type>& coefficients_bf) {
   // Assert coefficients have the correct size:
   assert_size(m_idata_ptr->nbas(), coefficients_bf.n_elem());
 
@@ -413,10 +421,10 @@ void FockMatrix<IntegralData>::build_fock_matrix_from_coefficient(
   auto cb_bo = coefficients_bf.subview(krims::range(m_n_beta));
 
   // Alpha and beta spin densities:
-  auto pa_bb = outer_sum(ca_bo, ca_bo);
-  auto pb_bb = outer_sum(cb_bo, cb_bo);
+  auto pa_bb = outer_prod_sum(ca_bo, ca_bo);
+  auto pb_bb = outer_prod_sum(cb_bo, cb_bo);
 
   build_fock_matrix_from_density(std::move(pa_bb), std::move(pb_bb));
 }
 
-}  // namespace scf_dummy
+}  // namespace gscfmock

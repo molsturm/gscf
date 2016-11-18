@@ -1,6 +1,6 @@
 #include "IntegralsSturmian14.hh"
 
-namespace scf_dummy {
+namespace gscfmock {
 /* clang-format off */
 const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_t_bb_base{
       {0.5, 0.25, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
@@ -3359,4 +3359,4 @@ const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_i_bbbb_ba
        0., 0., 0., 0.26946304563492063}};
 /* clang-format on */
 
-}  // namespace scf_dummy
+}  // namespace gscfmock

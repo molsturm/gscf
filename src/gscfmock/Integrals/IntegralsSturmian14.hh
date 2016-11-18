@@ -1,7 +1,7 @@
 #pragma once
 #include "IntegralDataBase.hh"
 
-namespace scf_dummy {
+namespace gscfmock {
 
 /** \brief Dummy integral class with 14 sturmians
  *
@@ -62,4 +62,4 @@ private:
   static const matrix_type m_i_bbbb_base;
 };
 
-}  // namespace scf_dummy
+}  // namespace gscfmock

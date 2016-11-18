@@ -2,7 +2,7 @@
 #include <linalgwrap/TypeUtils.hh>
 #include <linalgwrap/eigensystem.hh>
 
-namespace scf_dummy {
+namespace dummy_scf {
 using namespace linalgwrap;
 
 template <typename Matrix>
@@ -37,4 +37,4 @@ MultiVector<typename Matrix::vector_type> loewdin_guess(
   }
 }
 
-}  // namespace scf_dummy
+}  // namespace dummy_scf

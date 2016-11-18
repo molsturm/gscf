@@ -1,14 +1,15 @@
-#include "FockMatrix.hh"
 #include "ScfLibrary.hh"
-#include "integrals/IntegralsSturmian14.hh"
 #include "loewdin_guess.hh"
 #include <gscf/version.hh>
+#include <gscfmock/FockMatrix.hh>
+#include <gscfmock/Integrals.hh>
 #include <linalgwrap/io.hh>
 #include <linalgwrap/version.hh>
 
-namespace scf_dummy {
-using namespace linalgwrap;
+namespace dummy_scf {
 using namespace gscf;
+using namespace linalgwrap;
+using namespace gscfmock;
 
 /** Run an (atomic) SCF based on the integral data Sturmian14.
  *
@@ -48,7 +49,7 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   scfhf.update_control_params({{"n_prev_steps", size_t(4)}});
   scfhf.solve(fock, idata.s_bb());
 }
-}  // namespace scf_dummy
+}  // namespace dummy_scf
 
 int main() {
   std::cout << "gscf version: " << gscf::version::version_string() << std::endl
@@ -56,18 +57,21 @@ int main() {
             << std::endl
             << std::endl;
 
-  // This should be a test program using dummy integral data
-  // and a simple fock matrix class in order to do some types of DIIS
-  // and a plain SCF
-
-  //
-  // closed-shell Beryllium with k_exp = 1.351
-  //
+  std::cout << "#" << std::endl;
+  std::cout << "# Closed-shell Be with k_exp = 1." << std::endl;
+  std::cout << "#" << std::endl;
   double Z = 4.;
-  double k_exp = 1.;  // 1.351;
+  double k_exp = 1.;
   size_t n_alpha = 2;
   size_t n_beta = 2;
-  scf_dummy::run_sturmian14(Z, k_exp, n_alpha, n_beta);
+  dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta);
+
+  std::cout << std::endl << std::endl;
+  std::cout << "#" << std::endl;
+  std::cout << "# Closed-shell Be with k_exp = 1.351" << std::endl;
+  std::cout << "#" << std::endl;
+  k_exp = 1.351;
+  dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta);
 
   return 0;
 }

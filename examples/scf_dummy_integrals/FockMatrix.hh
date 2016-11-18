@@ -1,12 +1,10 @@
 #pragma once
 #include "integrals/IntegralDataBase.hh"
 #include <linalgwrap/LazyMatrix_i.hh>
-#include <linalgwrap/SubscriptionPointer.hh>
 #include <linalgwrap/io.hh>
-#include <linalgwrap/view.hh>
 
 namespace scf_dummy {
-// TODO more comments in the functions of this class
+using namespace linalgwrap;
 
 /** Struct to store the hf energies calculated in the FockMatrix class */
 template <typename Scalar>
@@ -69,16 +67,16 @@ struct HFTerms {
 };
 
 template <typename IntegralData>
-class FockMatrix
-      : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix_type> {
+class FockMatrix : public LazyMatrix_i<typename IntegralData::matrix_type> {
   static_assert(std::is_base_of<IntegralDataBase, IntegralData>::value,
                 "IntegralData needs to be derived from IntegralDataBase");
 
 public:
   typedef IntegralData idata_type;
-  typedef linalgwrap::LazyMatrix_i<typename idata_type::matrix_type> base_type;
+  typedef LazyMatrix_i<typename idata_type::matrix_type> base_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::stored_matrix_type stored_matrix_type;
+  typedef typename base_type::vector_type vector_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::lazy_matrix_expression_ptr_type
         lazy_matrix_expression_ptr_type;
@@ -90,7 +88,6 @@ public:
    *
    * This class assumes that we calculate a ground state, closed shell
    * electron configuration for now.
-   * TODO generalise.
    *
    * \param nalpha           Number of alpha electrons
    * \param nbeta            Number of beta electrons.
@@ -101,48 +98,88 @@ public:
    *        the dimensionality nbas x nfock, where nfock is the
    *        number of fock operator eigenstates we calculate.
    * \param store_hf_terms   Should the HF terms be stored
-   * 			       (exchange matrix, coulomb matrix, ...)
+   *                         (exchange matrix, coulomb matrix, ...)
    */
   FockMatrix(size_type n_alpha, size_type n_beta,
              const idata_type& integral_data,
-             const stored_matrix_type& initial_guess_bf,
+             const MultiVector<vector_type>& initial_guess_bf,
              bool store_hf_terms = false);
 
   /** Return the number of rows of the matrix */
-  size_type n_rows() const override;
+  size_type n_rows() const override { return m_fock_ptr->n_rows(); }
 
   /** Return the number of columns of the matrix */
-  size_type n_cols() const override;
+  size_type n_cols() const override { return m_fock_ptr->n_cols(); }
 
   /** Return an element of the matrix */
-  scalar_type operator()(size_type row, size_type col) const override;
+  scalar_type operator()(size_type row, size_type col) const override {
+    assert_greater(row, n_rows());
+    assert_greater(col, n_cols());
+    return (*m_fock_ptr)(row, col);
+  }
 
-  /** Apply matrix to another matrix */
-  stored_matrix_type operator*(const stored_matrix_type& in) const override;
+  /** \brief Compute the Matrix-Multivector application
+   *
+   * Forward to stored fock matrix
+   */
+  template <typename VectorIn, typename VectorOut,
+            mat_vec_apply_enabled_t<FockMatrix, VectorIn, VectorOut>...>
+  void apply(const MultiVector<VectorIn>& x, MultiVector<VectorOut>& y,
+             const Transposed mode = Transposed::None,
+             const scalar_type c_this = Constants<scalar_type>::one,
+             const scalar_type c_y = Constants<scalar_type>::zero) const {
+    m_fock_ptr->apply(x, y, mode, c_this, c_y);
+  }
+
+  /** \brief Compute the Matrix-Multivector application
+   *
+   * Forward to stored fock matrix
+   */
+  void apply(
+        const MultiVector<const MutableMemoryVector_i<scalar_type>>& x,
+        MultiVector<MutableMemoryVector_i<scalar_type>>& y,
+        const Transposed mode = Transposed::None,
+        const scalar_type c_this = Constants<scalar_type>::one,
+        const scalar_type c_y = Constants<scalar_type>::zero) const override {
+    m_fock_ptr->apply(x, y, mode, c_this, c_y);
+  }
 
   /** Clone the matrix */
-  lazy_matrix_expression_ptr_type clone() const override;
+  lazy_matrix_expression_ptr_type clone() const override {
+    return lazy_matrix_expression_ptr_type(new FockMatrix<IntegralData>(*this));
+  }
+
+  /** Return the scf update key */
+  std::string scf_update_key() const { return m_update_key; }
 
   /** Update the inner state:
    * Build the Fock matrix with the new coefficients
    *
    * It expects the new coefficients under the parameter key
-   * "evec_coefficients"
+   * returned by scf_update_key()
    */
-  void update(const linalgwrap::ParameterMap& map) override;
+  void update(const krims::ParameterMap& map) override {
+    if (map.exists(m_update_key)) {
+      build_fock_matrix_from_coefficient(
+            map.at<MultiVector<vector_type>>(m_update_key));
+    }
+  }
 
   /** Return the current set of energies, calculated at the most recent update
    */
-  const energies_type& energies() const;
+  const energies_type& energies() const { return m_energies; }
 
   /** Return the Hartree Fock terms
    *
    * asserts that they are actually stored in this class
    */
-  const terms_type& hf_terms() const;
+  const terms_type& hf_terms() const {
+    assert_dbg(m_terms_ptr, krims::ExcInvalidState("Terms not stored"));
+    return *m_terms_ptr;
+  }
 
   /** Are the Hartree Fock terms stored? */
-  bool are_hf_terms_stored() const;
+  bool are_hf_terms_stored() const { m_store_hf_terms; }
 
   /** Get the number of alpha electrons */
   size_type n_alpha() const { return m_n_alpha; }
@@ -166,7 +203,7 @@ private:
 
   /** Build the Fock matrix from a coefficient */
   void build_fock_matrix_from_coefficient(
-        const stored_matrix_type& coefficients_bf);
+        const MultiVector<vector_type>& coefficients_bf);
 
   /** Build the Fock matrix from alpha and beta densities */
   void build_fock_matrix_from_density(stored_matrix_type pa_bb,
@@ -179,7 +216,7 @@ private:
   size_type m_n_beta;
 
   //! The integral data
-  linalgwrap::SubscriptionPointer<const idata_type> m_idata_ptr;
+  krims::SubscriptionPointer<const idata_type> m_idata_ptr;
 
   //! The actual fock matrix for the current set of coefficients
   std::shared_ptr<stored_matrix_type> m_fock_ptr;
@@ -195,6 +232,9 @@ private:
 
   //! The current energy values:
   energies_type m_energies;
+
+  //! Key used for updating the state.
+  const std::string m_update_key = "evec_coefficients";
 };
 
 //
@@ -202,13 +242,12 @@ private:
 //
 
 template <typename IntegralData>
-FockMatrix<IntegralData>::FockMatrix(size_type n_alpha, size_type n_beta,
-                                     const idata_type& integral_data,
-                                     const stored_matrix_type& initial_guess,
-                                     bool store_hf_terms)
+FockMatrix<IntegralData>::FockMatrix(
+      size_type n_alpha, size_type n_beta, const idata_type& integral_data,
+      const MultiVector<vector_type>& initial_guess, bool store_hf_terms)
       : m_n_alpha{n_alpha},
         m_n_beta{n_beta},
-        m_idata_ptr{linalgwrap::make_subscription(integral_data, "FockMatrix")},
+        m_idata_ptr{krims::make_subscription(integral_data, "FockMatrix")},
         m_fock_ptr(std::make_shared<stored_matrix_type>(
               integral_data.nbas(), integral_data.nbas(), false)),
         m_store_hf_terms{store_hf_terms},
@@ -217,76 +256,14 @@ FockMatrix<IntegralData>::FockMatrix(size_type n_alpha, size_type n_beta,
 }
 
 template <typename IntegralData>
-typename FockMatrix<IntegralData>::size_type FockMatrix<IntegralData>::n_rows()
-      const {
-  return m_fock_ptr->n_rows();
-}
-
-template <typename IntegralData>
-typename FockMatrix<IntegralData>::size_type FockMatrix<IntegralData>::n_cols()
-      const {
-  return m_fock_ptr->n_cols();
-}
-
-template <typename IntegralData>
-typename FockMatrix<IntegralData>::scalar_type FockMatrix<IntegralData>::
-operator()(size_type row, size_type col) const {
-  assert_greater(row, n_rows());
-  assert_greater(col, n_cols());
-  return (*m_fock_ptr)(row, col);
-}
-
-template <typename IntegralData>
-typename FockMatrix<IntegralData>::stored_matrix_type FockMatrix<IntegralData>::
-operator*(const stored_matrix_type& in) const {
-  assert_size(m_fock_ptr->n_cols(), in.n_rows());
-  return *m_fock_ptr * in;
-}
-
-template <typename IntegralData>
-typename FockMatrix<IntegralData>::lazy_matrix_expression_ptr_type
-FockMatrix<IntegralData>::clone() const {
-  return lazy_matrix_expression_ptr_type(new FockMatrix<IntegralData>(*this));
-}
-
-template <typename IntegralData>
-void FockMatrix<IntegralData>::update(const linalgwrap::ParameterMap& map) {
-  // The coefficient key we look for:
-  const std::string coeff_key = "evec_coefficients";
-
-  if (map.exists(coeff_key)) {
-    // We have new coefficients:
-    const auto& coeff = map.at<stored_matrix_type>(coeff_key);
-    build_fock_matrix_from_coefficient(coeff);
-  }
-}
-
-template <typename IntegralData>
-inline const typename FockMatrix<IntegralData>::energies_type&
-FockMatrix<IntegralData>::energies() const {
-  return m_energies;
-}
-
-template <typename IntegralData>
-inline const typename FockMatrix<IntegralData>::terms_type&
-FockMatrix<IntegralData>::hf_terms() const {
-  assert_dbg(m_terms_ptr, linalgwrap::ExcInvalidState("Terms not stored"));
-  return *m_terms_ptr;
-}
-
-template <typename IntegralData>
-inline bool FockMatrix<IntegralData>::are_hf_terms_stored() const {
-  return m_store_hf_terms;
-}
-
-template <typename IntegralData>
 void FockMatrix<IntegralData>::calc_coulomb(
       const stored_matrix_type& density_bb, stored_matrix_type& coul_bb) const {
-  using namespace linalgwrap;
-
-  assert_dbg(density_bb.n_rows() == density_bb.n_cols(), ExcInternalError());
-  assert_dbg(density_bb.n_rows() == coul_bb.n_rows(), ExcInternalError());
-  assert_dbg(density_bb.n_cols() == coul_bb.n_cols(), ExcInternalError());
+  assert_dbg(density_bb.n_rows() == density_bb.n_cols(),
+             krims::ExcInternalError());
+  assert_dbg(density_bb.n_rows() == coul_bb.n_rows(),
+             krims::ExcInternalError());
+  assert_dbg(density_bb.n_cols() == coul_bb.n_cols(),
+             krims::ExcInternalError());
 
   // Number of basis fuctions:
   size_t nbas = density_bb.n_rows();
@@ -295,19 +272,19 @@ void FockMatrix<IntegralData>::calc_coulomb(
   // a and b are the same centre, so are c and d
 
   // Double loop over basis functions a and b:
-  for (auto a : range(nbas)) {
-    for (auto b : range(nbas)) {
+  for (size_type a = 0; a < nbas; ++a) {
+    for (size_type b = 0; b < nbas; ++b) {
       // Shell pair index for basis functions a and b:
-      size_type ab_pair = a * nbas + b;
+      const size_type ab_pair = a * nbas + b;
 
       // Sum accumulator variable:
       scalar_type sum{0};
 
       // Double loop over basis functions c and d:
-      for (auto c : range(nbas)) {
-        for (auto d : range(nbas)) {
+      for (size_type c = 0; c < nbas; ++c) {
+        for (size_type d = 0; d < nbas; ++d) {
           // Shell pair index for basis functions c and d:
-          size_type cd_pair = c * nbas + d;
+          const size_type cd_pair = c * nbas + d;
 
           // Perform contraction:
           sum += density_bb(c, d) * m_idata_ptr->i_bbbb()(ab_pair, cd_pair);
@@ -322,9 +299,8 @@ void FockMatrix<IntegralData>::calc_coulomb(
 template <typename IntegralData>
 void FockMatrix<IntegralData>::calc_exchange(
       const stored_matrix_type& density_bb, stored_matrix_type& exch_bb) const {
-  using namespace linalgwrap;
-
-  assert_dbg(density_bb.n_rows() == density_bb.n_cols(), ExcInternalError());
+  assert_dbg(density_bb.n_rows() == density_bb.n_cols(),
+             krims::ExcInternalError());
 
   // Number of basis fuctions:
   size_t nbas = density_bb.n_rows();
@@ -336,16 +312,16 @@ void FockMatrix<IntegralData>::calc_exchange(
   // a and c are the same centre, so are b and d
 
   // Double loop over shell pair basis functions a and c
-  for (auto a : range(nbas)) {
-    for (auto c : range(nbas)) {
+  for (size_type a = 0; a < nbas; ++a) {
+    for (size_type c = 0; c < nbas; ++c) {
       // Shell pair index for basis functions a and c:
-      size_type ac_pair = a * nbas + c;
+      const size_type ac_pair = a * nbas + c;
 
       // Double loop over shell pair basis functions d and b:
-      for (auto d : range(nbas)) {
-        for (auto b : range(nbas)) {
+      for (size_type d = 0; d < nbas; ++d) {
+        for (size_type b = 0; b < nbas; ++b) {
           // Shell pair index for d and b:
-          size_type bd_pair = d * nbas + b;
+          const size_type bd_pair = d * nbas + b;
 
           // Perform contraction:
           exch_bb(a, b) +=
@@ -359,8 +335,6 @@ void FockMatrix<IntegralData>::calc_exchange(
 template <typename IntegralData>
 void FockMatrix<IntegralData>::build_fock_matrix_from_density(
       stored_matrix_type pa_bb, stored_matrix_type pb_bb) {
-  using namespace linalgwrap;
-
   // Assert densities have the correct size:
   assert_size(m_idata_ptr->nbas(), pa_bb.n_rows());
   assert_size(m_idata_ptr->nbas(), pa_bb.n_cols());
@@ -391,15 +365,15 @@ void FockMatrix<IntegralData>::build_fock_matrix_from_density(
   const stored_matrix_type& kb_bb = m_terms_ptr->kb_bb;
 
   // Calculate 1e energy:
-  m_energies.energy_kinetic = (m_idata_ptr->t_bb() * pt_bb).trace();
-  m_energies.energy_elec_nuc_attr = (m_idata_ptr->v0_bb() * pt_bb).trace();
+  m_energies.energy_kinetic = trace(m_idata_ptr->t_bb() * pt_bb);
+  m_energies.energy_elec_nuc_attr = trace(m_idata_ptr->v0_bb() * pt_bb);
   m_energies.energy_1e_terms =
         m_energies.energy_kinetic + m_energies.energy_elec_nuc_attr;
 
   // Calculate 2e energies and sum:
-  m_energies.energy_coulomb = 0.5 * (j_bb * pt_bb).trace();
-  m_energies.energy_exchange = -0.5 * (ka_bb * m_terms_ptr->pa_bb).trace();
-  m_energies.energy_exchange -= 0.5 * (kb_bb * m_terms_ptr->pb_bb).trace();
+  m_energies.energy_coulomb = 0.5 * trace(j_bb * pt_bb);
+  m_energies.energy_exchange = -0.5 * trace(ka_bb * m_terms_ptr->pa_bb);
+  m_energies.energy_exchange -= 0.5 * trace(kb_bb * m_terms_ptr->pb_bb);
   m_energies.energy_2e_terms =
         m_energies.energy_coulomb + m_energies.energy_exchange;
   m_energies.energy_total =
@@ -430,18 +404,17 @@ void FockMatrix<IntegralData>::build_fock_matrix_from_density(
 
 template <typename IntegralData>
 void FockMatrix<IntegralData>::build_fock_matrix_from_coefficient(
-      const stored_matrix_type& coefficients_bf) {
-  using namespace linalgwrap;
+      const MultiVector<vector_type>& coefficients_bf) {
   // Assert coefficients have the correct size:
-  assert_size(m_idata_ptr->nbas(), coefficients_bf.n_rows());
+  assert_size(m_idata_ptr->nbas(), coefficients_bf.n_elem());
 
-  // Coefficients for occupied orbitals only:
-  auto ca_bo = view::columns(coefficients_bf, range(m_n_alpha));
-  auto cb_bo = view::columns(coefficients_bf, range(m_n_beta));
+  // Views for the vectors of the occupied orbitals:
+  auto ca_bo = coefficients_bf.subview(krims::range(m_n_alpha));
+  auto cb_bo = coefficients_bf.subview(krims::range(m_n_beta));
 
   // Alpha and beta spin densities:
-  auto pa_bb = static_cast<stored_matrix_type>(ca_bo * view::transpose(ca_bo));
-  auto pb_bb = static_cast<stored_matrix_type>(cb_bo * view::transpose(cb_bo));
+  auto pa_bb = outer_sum(ca_bo, ca_bo);
+  auto pb_bb = outer_sum(cb_bo, cb_bo);
 
   build_fock_matrix_from_density(std::move(pa_bb), std::move(pb_bb));
 }

@@ -20,23 +20,27 @@ public:
    * \param Z      nuclear charge
    * \param k_exp  Sturmian exponent factor
    * */
-  IntegralsSturmian14(scalar_type Z, scalar_type k_exp);
+  IntegralsSturmian14(scalar_type Z, scalar_type k_exp)
+        : m_Z{Z},
+          m_t_bb{(k_exp * k_exp) * m_t_bb_base},
+          m_v0_bb{-k_exp * m_Z * m_v0_bb_base},
+          m_i_bbbb{k_exp * m_i_bbbb_base} {}
 
   /** Return the number of basis functions */
-  size_type nbas() const override;
+  size_type nbas() const override { return m_nbas; }
 
   /** Return kinetic energy matrix */
-  const matrix_type& t_bb() const override;
+  const matrix_type& t_bb() const override { return m_t_bb; }
 
   /** Return nuclear potential matrix */
-  const matrix_type& v0_bb() const override;
+  const matrix_type& v0_bb() const override { return m_v0_bb; }
 
   /** Return overlap matrix */
-  const matrix_type& s_bb() const override;
+  const matrix_type& s_bb() const override { return m_s_bb; }
 
   /** Return two electron integrals as an nbas^2 x nbas^2 matrix
    *  of shell pairs.*/
-  const matrix_type& i_bbbb() const override;
+  const matrix_type& i_bbbb() const override { return m_i_bbbb; }
 
 private:
   static constexpr size_type m_nbas = 14;

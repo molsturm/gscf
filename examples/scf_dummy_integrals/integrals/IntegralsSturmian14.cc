@@ -1,38 +1,6 @@
 #include "IntegralsSturmian14.hh"
 
 namespace scf_dummy {
-
-IntegralsSturmian14::IntegralsSturmian14(scalar_type Z, scalar_type k_exp)
-      : m_Z{Z},
-        m_t_bb{(k_exp * k_exp) * m_t_bb_base},
-        m_v0_bb{-k_exp * m_Z * m_v0_bb_base},
-        m_i_bbbb{k_exp * m_i_bbbb_base} {}
-
-inline typename IntegralsSturmian14::size_type IntegralsSturmian14::nbas()
-      const {
-    return m_nbas;
-}
-
-const typename IntegralsSturmian14::matrix_type& IntegralsSturmian14::t_bb()
-      const {
-    return m_t_bb;
-}
-
-const typename IntegralsSturmian14::matrix_type& IntegralsSturmian14::v0_bb()
-      const {
-    return m_v0_bb;
-}
-
-const typename IntegralsSturmian14::matrix_type& IntegralsSturmian14::s_bb()
-      const {
-    return m_s_bb;
-}
-
-const typename IntegralsSturmian14::matrix_type& IntegralsSturmian14::i_bbbb()
-      const {
-    return m_i_bbbb;
-}
-
 /* clang-format off */
 const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_t_bb_base{
       {0.5, 0.25, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},

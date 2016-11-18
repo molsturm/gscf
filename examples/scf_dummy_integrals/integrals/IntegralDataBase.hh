@@ -4,7 +4,7 @@
 namespace scf_dummy {
 
 /** Class for dummy integrals around an atom */
-class IntegralDataBase : public linalgwrap::Subscribable {
+class IntegralDataBase : public krims::Subscribable {
 public:
   typedef double scalar_type;
   typedef linalgwrap::SmallMatrix<scalar_type> matrix_type;

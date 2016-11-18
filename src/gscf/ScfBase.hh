@@ -1,41 +1,67 @@
 #pragma once
-#include "ExcScfFailedToConverge.hh"
-#include "IterationConstants.hh"
-#include "ScfControlBase.hh"
+#include "ScfBaseKeys.hh"
 #include "ScfStateBase.hh"
-#include "eig_sym_hack.hh"
-#include <type_traits>
+#include <linalgwrap/eigensystem.hh>
 
 namespace gscf {
+
+DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
+                    << "The SCF procedure failed to converge, since an inner "
+                       "eigensolver failed: "
+                    << details);
 
 /** Class to provide building block functions and a common interface
  * for SCF procedures
  *
  * \see gscf::ScfStateBase
- * \see gscf::ScfControlBase
  * */
-template <typename ScfState, typename ScfControl>
-class ScfBase {
-  static_assert(IsScfState<ScfState>::value,
-                "ScfState needs to be a type derived from ScfStateBase");
-
-  static_assert(IsScfControl<ScfControl>::value,
-                "ScfState needs to be a type derived from ScfControlBase");
-
-  static_assert(
-        std::is_base_of<typename ScfControl::scf_state_type, ScfState>::value,
-        "The ScfState needs to be derived off ScfControl::scf_state_type for "
-        "proper functioning");
+template <typename State>
+class ScfBase
+      : public linalgwrap::IterativeSolver<linalgwrap::SolverBase<State>> {
+  static_assert(IsScfState<State>::value,
+                "State needs to be a type derived from ScfStateBase");
 
 public:
-  typedef ScfControl scf_control_type;
-  typedef ScfState scf_state_type;
-  typedef typename scf_state_type::probmat_type probmat_type;
-  typedef typename scf_state_type::diagmat_type diagmat_type;
-  typedef typename scf_state_type::scalar_type scalar_type;
-  typedef typename scf_state_type::size_type size_type;
-  typedef typename scf_state_type::matrix_type matrix_type;
-  typedef typename scf_state_type::vector_type vector_type;
+  typedef linalgwrap::IterativeSolver<linalgwrap::SolverBase<State>> base_type;
+  typedef typename base_type::state_type state_type;
+
+  /** \name Types forwarded from ScfState */
+  ///@{
+  /** The type of the problem matrix as determined by the traits */
+  typedef typename state_type::probmat_type probmat_type;
+
+  /** The type of the problem matrix as determined by the traits */
+  typedef typename state_type::diagmat_type diagmat_type;
+
+  /** The type of the scalars as determined by the traits */
+  typedef typename state_type::scalar_type scalar_type;
+
+  /** The type of the size indices as determined by the traits */
+  typedef typename state_type::size_type size_type;
+
+  /** The type of the stored matrices as determined by the traits */
+  typedef typename state_type::matrix_type matrix_type;
+  ///@}
+
+  /** \name Iteration control */
+  ///@{
+  /** The number of eigenpairs to calculate in the SCF procedure */
+  size_type n_eigenpairs = linalgwrap::Constants<size_type>::all;
+
+  /** The parameters for the inner eigensolver */
+  const krims::ParameterMap eigensolver_params;
+
+  /** Bulk-update control parameters from a parameter map.
+   *
+   * For the list of available keys, see ScfBaseKeys.hh
+   */
+  void update_control_params(const krims::ParameterMap& map) {
+    base_type::update_control_params(map);
+    n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
+
+    eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
+  }
+  ///@}
 
   /** \name Run an SCF
    */
@@ -43,110 +69,59 @@ public:
   /** \brief Run the scf solver with the provided problem matrix
    *  and overlap matrix and return the final state.
    *
-   * \param assert_nofail If set to true, any exception indicating convergence
-   * failure will be passed upwards, else it will be suppressed.
-   * In this case the fail message of the returned state gives valuable
-   * information why the iteration failed.
+   *  If the solver does not manage to achieve convergence a
+   *  SolverException is thnown an the state's fail bit will be set
+   *  accompanied with an appropriate fail message.
    *
-   * \note The returned state contains information on whether the SCF
-   * converged or failed.
    **/
-  virtual scf_state_type solve(probmat_type probmat_bb,
-                               const matrix_type& overlapmat_bb,
-                               bool assert_nofail) const = 0;
+  virtual state_type solve(probmat_type probmat_bb,
+                           const matrix_type& overlapmat_bb) const {
+    state_type state{std::move(probmat_bb), overlapmat_bb};
+    this->solve_state(state);
+    return state;
+  }
 
   /** \brief Run the solver starting from an old SCF state.
    *
    * It is assumed, that the input state is not failed.
-   * Note that the fail bit can be unset using the clear_failed() function.
-   *
-   * Implementing classes are advised to overload this method in order to
-   * make use of the old state.
-   *
-   * \param assert_nofail If set to true, any exception indicating convergence
-   * failure will be passed upwards, else it will be suppressed.
-   * In this case the fail message of the returned state gives valuable
-   * information why the iteration failed.
+   * Note that the fail bit can be unset using the clear_failed() function
+   * in order to continue off a failed state using different solver
+   * control parameters or methods.
    */
-  virtual scf_state_type solve(const scf_state_type& old_state,
-                               bool assert_nofail = true) const;
+  virtual state_type solve(const state_type& old_state) const {
+    assert_dbg(!old_state.is_failed(),
+               krims::ExcInvalidState("Cannot make use of a failed state"));
+    state_type state{old_state};
+    this->solve_state(state);
+    return state;
+  }
   ///@}
-
-  /** Access scf control read-only */
-  const scf_control_type& scf_control() const;
-
-  /** Access scf control read-write */
-  scf_control_type& scf_control();
 
 protected:
   /** \name Handler functions
    * Various virtual handler functions, which are called when
    * certain events happen.
+   *
+   * Further handler functions can be found in IterativeSolver and
+   * SolverBase of linalgwrap.
    */
   ///@{
-  /* Handler which is called before an iteration step is performed
-   *
-   * The iteration count has already been incremented.
-   * */
-  virtual void before_iteration_step(scf_state_type&) const {}
-
-  /** Handler which is called once an iteration step finishes
-   *
-   * This is the last thing called before the convergence and sanity
-   * checks.
-   * */
-  virtual void after_iteration_step(scf_state_type&) const {}
-
   /** Handler which is called once the problem matrix has been diagonalised
    *  and new eigenpairs are obtained for this problem matrix
    */
-  virtual void on_update_eigenpairs(scf_state_type&) const {}
+  virtual void on_update_eigenpairs(state_type&) const {}
 
   /** Handler which is called once the new problem matrix has been formed
    *  from the current set of eigenvectors
    */
-  virtual void on_update_problem_matrix(scf_state_type&) const {}
-
-  /** Handler which is called once the iteration has converged */
-  virtual void on_converged(scf_state_type&) const {}
-
-  /** Handler which is called by fail_scf once the iteration has failed */
-  virtual void on_failed(scf_state_type&) const {}
+  virtual void on_update_problem_matrix(state_type&) const {}
   ///@}
-
-  /** Construct an ScfBase object. */
-  ScfBase() : m_scf_control{} {}
-
-  virtual ~ScfBase() = default;
-  ScfBase(const ScfBase&) = default;
-  ScfBase(ScfBase&&) = default;
-  ScfBase& operator=(const ScfBase&) = default;
-  ScfBase& operator=(ScfBase&&) = default;
 
   /** \name Scf building blocks.
    * Various virtual handler functions, which are called when
    * certain events happen.
    */
   ///@{
-  /** \brief Start the next iteration step
-   *
-   * Increase the iteration count and call the pre_step_handler.
-   **/
-  void start_iteration_step(scf_state_type& s) const;
-
-  /** \brief Check whether convergence has been achieved
-   * Return true if yes, else false
-   **/
-  bool is_converged(scf_state_type& s) const;
-
-  /** \brief Fail an scf iteration.
-   *
-   * Set the fail message of the state to fail_message.
-   * Then call the on_failed handler and throw an
-   * ExcScfFailedToConverge with the same message.
-   */
-  void fail_scf(scf_state_type& s, const ScfFailReason& fail_reason) const;
-
   /** \brief Solve the eigensystem currently represented by the
    *  diagonalised_matrix_ptr and the overlap_matrix of the SCF state
    *  and place results back inside the state.
@@ -157,7 +132,7 @@ protected:
    *  and that their magic is in charge for cleaning up
    *  unused storage automatically.
    */
-  void update_eigenpairs(scf_state_type& s) const;
+  void update_eigenpairs(state_type& s) const;
 
   /** \brief Update the problem matrix and replace the current
    *  one in the SCF state.
@@ -166,143 +141,52 @@ protected:
    *  and that their magic is in charge for cleaning up
    *  unused storage automatically.
    */
-  void update_problem_matrix(scf_state_type& s) const;
-
-  /** End the current iteration step.
-   *
-   *  In principle it check that we are not beyond
-   *   max_iter
-   */
-  void end_iteration_step(scf_state_type& s) const;
+  void update_problem_matrix(state_type& s) const;
   ///@}
-
-private:
-  //! The SCF control object, which controls the convergence
-  //  checks and iterations done in this class.
-  scf_control_type m_scf_control;
 };
 
 //
 // ------------------------------------
 //
 
-template <typename ScfState, typename ScfControl>
-inline typename ScfBase<ScfState, ScfControl>::scf_state_type
-ScfBase<ScfState, ScfControl>::solve(const scf_state_type& old_state,
-                                     bool assert_nofail) const {
-  assert_dbg(!old_state.is_failed(),
-             linalgwrap::ExcInvalidState("Cannot make use of a failed state"));
-  return solve(*old_state.problem_matrix_ptr(), old_state.overlap_matrix(),
-               assert_nofail);
-}
-
-template <typename ScfState, typename ScfControl>
-const typename ScfBase<ScfState, ScfControl>::scf_control_type&
-ScfBase<ScfState, ScfControl>::scf_control() const {
-  return m_scf_control;
-}
-
-template <typename ScfState, typename ScfControl>
-typename ScfBase<ScfState, ScfControl>::scf_control_type&
-ScfBase<ScfState, ScfControl>::scf_control() {
-  return m_scf_control;
-}
-
-template <typename ScfState, typename ScfControl>
-inline void ScfBase<ScfState, ScfControl>::start_iteration_step(
-      scf_state_type& s) const {
-  // Assert that SCF is not failed.
-  assert_dbg(!s.is_failed(),
-             linalgwrap::ExcInvalidState(
-                   ("SCF has failed, reason: " + s.fail_reason()).c_str()));
-
-  // Increase the iteration count:
-  s.increase_iteration_count();
-
-  // Call the pre step handler:
-  before_iteration_step(s);
-}
-
-template <typename ScfState, typename ScfControl>
-bool ScfBase<ScfState, ScfControl>::is_converged(scf_state_type& s) const {
-  bool converged = !s.is_failed() && m_scf_control.is_converged(s);
-  if (converged) {
-    on_converged(s);
-  }
-  return converged;
-}
-
-template <typename ScfState, typename ScfControl>
-void ScfBase<ScfState, ScfControl>::fail_scf(
-      scf_state_type& s, const ScfFailReason& fail_reason) const {
-  s.fail(fail_reason.as_string());
-  on_failed(s);
-  assert_throw(false, ExcScfFailedToConverge(fail_reason));
-}
-
-template <typename ScfState, typename ScfControl>
-void ScfBase<ScfState, ScfControl>::update_eigenpairs(scf_state_type& s) const {
-  // Assert that SCF is not failed.
-  assert_dbg(!s.is_failed(),
-             linalgwrap::ExcInvalidState(
-                   ("SCF has failed, reason: " + s.fail_reason()).c_str()));
+template <typename ScfState>
+void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
+  using namespace linalgwrap;
 
   assert_dbg(s.diagonalised_matrix_ptr() != nullptr,
-             linalgwrap::ExcInvalidState("update_eigenpairs needs a valid "
-                                         "matrix pointer inside "
-                                         "s.diagonalised_matrix_ptr"));
+             krims::ExcInvalidState("update_eigenpairs needs a valid "
+                                    "matrix pointer inside "
+                                    "s.diagonalised_matrix_ptr"));
 
-  const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
+  try {
+    // TODO: Think about decomposing the overlap matrix
+    //       and transforming to the orthogonal basis
+    //       for small problems here!
 
-  // The number of eigenpairs to compute:
-  size_type n_eigenpairs = m_scf_control.n_eigenpairs;
-  if (n_eigenpairs == IterationConstants<size_type>::all) {
-    // Compute all eigenpairs:
-    n_eigenpairs = diagmat.n_cols();
+    // Solve the problem:
+    const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
+    auto sol = eigensystem_hermitian(diagmat, s.overlap_matrix(), n_eigenpairs,
+                                     eigensolver_params);
+
+    // Update state:
+    s.eigenvectors_ptr() = sol.evectors_ptr;
+    s.eigenvalues_ptr() = sol.evalues_ptr;
+  } catch (const linalgwrap::SolverException& e) {
+    std::stringstream ss;
+    e.print_extra(ss);
+    solver_assert(false, s, ExcInnerEigensolverFailed(ss.str()));
   }
 
-  assert_greater_equal(n_eigenpairs, diagmat.n_cols());
-
-  // Containers for the new eigenpairs:
-  auto new_eigenvectors_ptr =
-        std::make_shared<matrix_type>(diagmat.n_rows(), n_eigenpairs);
-  auto new_eigenvalues_ptr = std::make_shared<vector_type>(n_eigenpairs);
-
-  // Do eigenproblem:
-  // TODO Take the number of eigenpairs requested into account here
-  bool success =
-        detail::eig_sym_hack(diagmat, s.overlap_matrix(), *new_eigenvectors_ptr,
-                             *new_eigenvalues_ptr);
-
-  if (!success) {
-    fail_scf(s, ScfFailReason::ReasonId::INNER_EIGENSOLVER_FAILED);
-    return;
-  }
-
-  // Update state:
-  s.eigenvectors_ptr() = new_eigenvectors_ptr;
-  s.eigenvalues_ptr() = new_eigenvalues_ptr;
-
-  // call the handler:
+  // Call the handler
   on_update_eigenpairs(s);
 }
 
-template <typename ScfState, typename ScfControl>
-void ScfBase<ScfState, ScfControl>::update_problem_matrix(
-      scf_state_type& s) const {
-  // Assert that SCF is not failed.
-  assert_dbg(!s.is_failed(),
-             linalgwrap::ExcInvalidState(
-                   ("SCF has failed, reason: " + s.fail_reason()).c_str()));
-
-  // Store new coefficients in a parameter map:
-  linalgwrap::ParameterMap m;
-  m.update(m_scf_control.update_key, s.eigenvectors_ptr());
-
+template <typename ScfState>
+void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
   if (!s.problem_matrix_ptr().unique()) {
     // s is not the only thing referencing the object behind the
     // problem_matrix_ptr shared pointer, so we need to copy the object
-    // first. This assuresthat objects that depend on the SCF state (i.e.
+    // first. This assures that objects that depend on the SCF state (i.e.
     // those which actually copyied the shared pointer to some internal
     // place) still access the old, non-updated problem matrix.
     //
@@ -320,27 +204,12 @@ void ScfBase<ScfState, ScfControl>::update_problem_matrix(
     s.problem_matrix_ptr() = new_problem_matrix_ptr;
   }
 
-  // Update the new problem matrix:
-  s.problem_matrix_ptr()->update(m);
+  // Obtain the expected update key from the problem matrix
+  // and update the problem matrix:
+  const std::string key = s.problem_matrix_ptr()->scf_update_key();
+  s.problem_matrix_ptr()->update({{key, s.eigenvectors_ptr()}});
 
-  // call the handler:
   on_update_problem_matrix(s);
-}
-
-template <typename ScfState, typename ScfControl>
-inline void ScfBase<ScfState, ScfControl>::end_iteration_step(
-      scf_state_type& s) const {
-  // Assert that SCF is not failed.
-  assert_dbg(!s.is_failed(),
-             linalgwrap::ExcInvalidState(
-                   ("SCF has failed, reason: " + s.fail_reason()).c_str()));
-
-  // Call the handler:
-  after_iteration_step(s);
-
-  if (s.n_iter_count() >= m_scf_control.max_iter) {
-    fail_scf(s, ScfFailReason::ReasonId::MAXIMUM_ITERATIONS_REACHED);
-  }
 }
 
 }  // namespace gscf

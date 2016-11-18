@@ -2,7 +2,7 @@
 # set the source files.
 #
 set(GSCF_SOURCES
-	ExcScfFailedToConverge.cc
+	ScfBaseKeys.cc
 	version.cc
 )
 

@@ -1,10 +1,7 @@
 #pragma once
-#include "IterationConstants.hh"
 #include "ScfBase.hh"
-#include "ScfControlBase.hh"
 #include "ScfStateBase.hh"
-#include <linalgwrap/Constants.hh>
-#include <linalgwrap/ParameterMap.hh>
+#include <krims/ParameterMap.hh>
 
 namespace gscf {
 
@@ -26,115 +23,85 @@ struct PlainScfState : public ScfStateBase<ProblemMatrix, ProblemMatrix> {
         : base_type{std::move(probmat), overlap_mat} {}
 };
 
-/** \brief Class to provide the basic set of parameters and the convergence
- *  checks the ScfBase class needs.
- *
- *  Consider overriding the is_converged function to provide an actual
- *  convergence check. This version just returns false, i.e. never
- *  converges. The signature is
- *  ```
- *  bool is_converged(const scf_state_type&) const;
- *  ```
- *  Note that this function is called *after* the end_iteration_step
- *  handler.
- *
- * By default this class instructs the scf to run for a maximum of 100
- * iterations
- * and compute all eigenpairs.
- *
- * \see gscf::PlainScf
- */
-template <typename ScfState>
-struct PlainScfControl : public ScfControlBase<ScfState> {
-  typedef ScfControlBase<ScfState> base_type;
-  typedef typename base_type::size_type size_type;
-
-  PlainScfControl()
-        //          Number of eigenpairs,               maxiter
-        : base_type{IterationConstants<size_type>::all, 100} {}
-};
-
 /** \name  Basic and plain SCF algorithm
  *
  * This just keeps running until maxiter is reached. If you want to add
  * a convergence criterion override the is_converged(state) function.
  *
+ * ## Control parameters and their default values
+ *   - max_iter: Maximum number of iterations. (Default: 100)
+ *   - n_eigenpairs: The number of eigenpairs to seek
+ *          (Default: linalgwrap::Constanst<size_type>::all)
+ *   - eigensolver_params: krims::Parameter map containing the parameters
+ *          for the eigensolver. See linalgwrap/eigensystem.hh or the
+ *          documentation of your chosen eigensolver for possible values.
+ *          Note that this map can be used to *select* an eigensolver as
+ *          well.
+ *
  * \tparam ProblemMatrix  The type of the problem matrix to be solved
  * \tparam ScfState       The precise scf state type which is available
  *                        to is_converged and all handler functions.
- * \tparam ScfControl     The scf control type which contains parameters
- *                        as well as functionality to check convergence.
  */
 template <typename ProblemMatrix,
-          typename ScfState = PlainScfState<ProblemMatrix>,
-          typename ScfControl = PlainScfControl<ScfState>>
-class PlainScf : public ScfBase<ScfState, ScfControl> {
+          typename ScfState = PlainScfState<ProblemMatrix>>
+class PlainScf : public ScfBase<ScfState> {
 public:
-  typedef ScfBase<ScfState, ScfControl> base_type;
-  typedef typename base_type::scf_state_type scf_state_type;
+  typedef ScfBase<ScfState> base_type;
+  typedef typename base_type::state_type state_type;
 
-  typedef typename scf_state_type::probmat_type probmat_type;
-  typedef typename scf_state_type::diagmat_type diagmat_type;
-  typedef typename scf_state_type::scalar_type scalar_type;
-  typedef typename scf_state_type::size_type size_type;
-  typedef typename scf_state_type::matrix_type matrix_type;
-  typedef typename scf_state_type::vector_type vector_type;
+  typedef typename state_type::probmat_type probmat_type;
+  // typedef typename state_type::diagmat_type diagmat_type;
+  // typedef typename state_type::scalar_type scalar_type;
+  // typedef typename state_type::size_type size_type;
+  typedef typename state_type::matrix_type matrix_type;
 
   static_assert(std::is_same<ProblemMatrix, probmat_type>::value,
                 "The ProblemMatrix type specified and the one implicit in the "
                 "ScfState class have to agree.");
 
-  /** Run a Plain SCF eigenproblem with the provided problem matrix
-   *  and overlap matrix and return the final state.
-   *
-   * \param assert_nofail If set to true, any exception indicating convergence
-   * failure will be passed upwards, else it will be suppressed.
-   * In this case the fail message of the returned state gives valuable
-   * information why the iteration failed.
-   *
-   * \note The returned state contains information on whether the SCF
-   * converged or failed.
-   **/
-  scf_state_type solve(probmat_type probmat_bb,
-                       const matrix_type& overlapmat_bb,
-                       bool assert_nofail = true) const override;
+  /** \name Constructor */
+  //@{
+  /** Construct a plain SCF solver with default parameters */
+  PlainScf() {}
+
+  /** Construct a plain SCF solver setting the parameters from the map */
+  PlainScf(const krims::ParameterMap& map) : PlainScf() {
+    update_control_params(map);
+  }
+  //@}
+
+  /** \name Iteration control */
+  ///@{
+  /** Update control parameters from Parameter map */
+  void update_control_params(const krims::ParameterMap& map) {
+    base_type::update_control_params(map);
+  }
+  ///@}
+
+  /** Implementation of the SolverBase method */
+  void solve_state(state_type& state) const override;
 };
 
-template <typename ProblemMatrix, typename ScfState, typename ScfControl>
-typename PlainScf<ProblemMatrix, ScfState, ScfControl>::scf_state_type
-PlainScf<ProblemMatrix, ScfState, ScfControl>::solve(
-      probmat_type probmat_bb, const matrix_type& overlapmat_bb,
-      bool assert_nofail) const {
-  // Construct new state:
-  scf_state_type state(std::move(probmat_bb), overlapmat_bb);
+template <typename ProblemMatrix, typename ScfState>
+void PlainScf<ProblemMatrix, ScfState>::solve_state(state_type& state) const {
+  while (!base_type::convergence_reached(state)) {
+    base_type::start_iteration_step(state);
 
-  try {
-    // Iterate:
-    while (!base_type::is_converged(state)) {
-      base_type::start_iteration_step(state);
+    // Diagonalise the problem matrix
+    state.diagonalised_matrix_ptr() = state.problem_matrix_ptr();
+    base_type::update_eigenpairs(state);
 
-      // Diagonalise the problem matrix
-      state.diagonalised_matrix_ptr() = state.problem_matrix_ptr();
-      base_type::update_eigenpairs(state);
+    // We free the extra pointer to the problem matrix object here
+    // such that the problem_matrix_ptr is the only guy pointing
+    // to it. This has the advantage that the update_problem_matrix
+    // does not need to do a copy of the object referred to by the
+    // problem_matrix_ptr, but it can just update the current one
+    // in-place.
+    state.diagonalised_matrix_ptr().reset();
+    base_type::update_problem_matrix(state);
 
-      // We free the extra pointer to the problem matrix object here
-      // such that the problem_matrix_ptr is the only guy pointing
-      // to it. This has the advantage that the update_problem_matrix
-      // does not need to do a copy of the object referred to by the
-      // problem_matrix_ptr, but it can just update the current one
-      // in-place.
-      state.diagonalised_matrix_ptr().reset();
-      base_type::update_problem_matrix(state);
-
-      base_type::end_iteration_step(state);
-    }
-  } catch (ExcScfFailedToConverge& e) {
-    if (assert_nofail) throw;
-    return state;
+    base_type::end_iteration_step(state);
   }
-
-  // Return the final state
-  return state;
 }
 
 }  // gscf

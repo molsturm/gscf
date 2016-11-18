@@ -1,9 +1,5 @@
 #pragma once
-#include "IterationState.hh"
-#include <linalgwrap/SubscriptionPointer.hh>
-#include <linalgwrap/VectorOf.hh>
-#include <linalgwrap/type_utils.hh>
-#include <memory>
+#include <linalgwrap/Base/Solvers.hh>
 
 namespace gscf {
 
@@ -15,12 +11,16 @@ namespace gscf {
  * \tparam ProblemMatrix The type of the Problem matrix object.
  */
 template <typename ProblemMatrix, typename DiagonalisedMatrix = ProblemMatrix>
-class ScfStateBase : public IterationState {
+class ScfStateBase : public linalgwrap::SolverStateBase,
+                     public linalgwrap::IterativeSolverState {
 public:
   /** \name Type definitions */
   ///@{
   /** The type of the problem matrix, i.e. the non-linear problem
-   *  we which to solve. */
+   *  we which to solve.
+   *
+   *  We assume that the Problem is Hermitian (or symmetric).
+   *  */
   typedef ProblemMatrix probmat_type;
 
   /** The type of the matrix to be diagonalised in order to obtain
@@ -36,8 +36,8 @@ public:
   /** The type of the stored matrices as determined by the traits */
   typedef typename probmat_type::stored_matrix_type matrix_type;
 
-  /** The type of the stored vectors as determined by the traits */
-  typedef linalgwrap::VectorOf<matrix_type> vector_type;
+  /** The type of the eigenvectors */
+  typedef typename matrix_type::vector_type vector_type;
   ///@}
 
   /** Get the overlap matrix of thc SCF problem */
@@ -81,23 +81,27 @@ public:
     return m_diagonalised_matrix;
   }
 
-  /** Constant access to the current eigenvector matrix */
-  const std::shared_ptr<const matrix_type> eigenvectors_ptr() const {
+  /** Constant access to the current eigenvectors */
+  const std::shared_ptr<const linalgwrap::MultiVector<vector_type>>
+  eigenvectors_ptr() const {
     return m_eigenvectors_ptr;
   }
 
-  /** Access to the current eigenvector matrix */
-  std::shared_ptr<matrix_type>& eigenvectors_ptr() {
+  /** Access to the current eigenvectors */
+  std::shared_ptr<linalgwrap::MultiVector<vector_type>>& eigenvectors_ptr() {
     return m_eigenvectors_ptr;
   }
 
   /** Constant access to the current eigenvalues */
-  const std::shared_ptr<const vector_type> eigenvalues_ptr() const {
+  const std::shared_ptr<const std::vector<scalar_type>> eigenvalues_ptr()
+        const {
     return m_eigenvalues_ptr;
   }
 
   /** Access to the current eigenvalues */
-  std::shared_ptr<vector_type>& eigenvalues_ptr() { return m_eigenvalues_ptr; }
+  std::shared_ptr<std::vector<scalar_type>>& eigenvalues_ptr() {
+    return m_eigenvalues_ptr;
+  }
 
   /** \brief Constructor
    *
@@ -107,17 +111,23 @@ public:
    * eigenvectors and the eigenvalues pointers are set to nullptr.
    * */
   ScfStateBase(probmat_type prob_mat, const matrix_type& overlap_mat)
-        : m_overlap_matrix_ptr{linalgwrap::make_subscription(overlap_mat,
-                                                             "ScfState")},
+        : m_overlap_matrix_ptr{krims::make_subscription(overlap_mat,
+                                                        "ScfState")},
           m_problem_matrix_ptr{
                 std::make_shared<probmat_type>(std::move(prob_mat))},
           m_diagonalised_matrix{nullptr},
           m_eigenvectors_ptr{nullptr},
-          m_eigenvalues_ptr{nullptr} {}
+          m_eigenvalues_ptr{nullptr} {
+    // Check that we really get a hermitian matrix as we implicitly assume.
+    assert_dbg(m_problem_matrix_ptr->is_hermitian(),
+               linalgwrap::ExcMatrixNotHermitian());
+    // Note: This assumption is build into the update_eigenpairs method
+    //       of ScfBase.
+  }
 
 private:
   //! The overlap matrix of the SCF problem.
-  linalgwrap::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
+  krims::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
 
   /** The current problem matrix as obtained as the approximation
    *  to the self-consistent problem matrix in this step. **/
@@ -130,25 +140,38 @@ private:
   std::shared_ptr<diagmat_type> m_diagonalised_matrix;
 
   //! The current set of eigenvectors of the operator
-  std::shared_ptr<matrix_type> m_eigenvectors_ptr;
+  std::shared_ptr<linalgwrap::MultiVector<vector_type>> m_eigenvectors_ptr;
 
   //! The current eigenvalues of the operator
-  std::shared_ptr<vector_type> m_eigenvalues_ptr;
+  std::shared_ptr<std::vector<scalar_type>> m_eigenvalues_ptr;
+
+  // Check that the eigenvalue and eigenvector types are as we expect.
+  // We need to do this, since we want to keep the interface simple here.
+  // The eigenpair method handles all kind of eigenproblems and returns
+  // its findings in the most sensible type possible. For Hermitian problems
+  // this is as of now always the vector_type of the stored matrix for
+  // the eigenvectors and the scalar type for the eigenvalues.
+  // This is just here to check that this is really what we get.
+  static_assert(std::is_same<vector_type,
+                             typename linalgwrap::EigensolutionTypeFor<
+                                   true, diagmat_type>::evector_type>::value,
+                "Problem when determining the eigenvector type");
+  static_assert(std::is_same<scalar_type,
+                             typename linalgwrap::EigensolutionTypeFor<
+                                   true, diagmat_type>::evalue_type>::value,
+                "Problem when determining the eigenvalue type");
 };
 
 //@{
 /** \brief struct representing a type (std::true_type, std::false_type) which
  *  indicates whether T is derived from ScfStateBase
- *
- * The definition is done using SFINAE, such that even for types not having a
- * typedef scalar_type this expression is valid.
  *  */
 template <typename T, typename = void>
 struct IsScfState : public std::false_type {};
 
 template <typename T>
 struct IsScfState<
-      T, linalgwrap::void_t<typename T::probmat_type, typename T::diagmat_type>>
+      T, krims::VoidType<typename T::probmat_type, typename T::diagmat_type>>
       : public std::is_base_of<
               ScfStateBase<typename T::probmat_type, typename T::diagmat_type>,
               T> {};

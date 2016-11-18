@@ -3,6 +3,7 @@
 #
 set(GSCF_SOURCES
 	ScfBaseKeys.cc
+	PulayDiisScfKeys.cc
 	version.cc
 )
 

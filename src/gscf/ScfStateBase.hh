@@ -30,6 +30,9 @@ public:
   /** The type of the scalars */
   typedef typename probmat_type::scalar_type scalar_type;
 
+  /** The type for real values */
+  typedef typename probmat_type::real_type real_type;
+
   /** The type of the size indices as determined by the traits */
   typedef typename probmat_type::size_type size_type;
 

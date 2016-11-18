@@ -5,6 +5,8 @@
 
 namespace gscf {
 
+// TODO Compute and use S^{-0.5} for small problem sizes
+
 DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
                     << "The SCF procedure failed to converge, since an inner "
                        "eigensolver failed: "
@@ -49,7 +51,7 @@ public:
   size_type n_eigenpairs = linalgwrap::Constants<size_type>::all;
 
   /** The parameters for the inner eigensolver */
-  const krims::ParameterMap eigensolver_params;
+  krims::ParameterMap eigensolver_params;
 
   /** Bulk-update control parameters from a parameter map.
    *

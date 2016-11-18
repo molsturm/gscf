@@ -1,7 +1,7 @@
 #include "FockMatrix.hh"
 #include "ScfLibrary.hh"
-#include "hack_guess.hh"
 #include "integrals/IntegralsSturmian14.hh"
+#include "loewdin_guess.hh"
 #include <gscf/version.hh>
 #include <linalgwrap/io.hh>
 #include <linalgwrap/version.hh>
@@ -20,7 +20,6 @@ using namespace gscf;
 void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   // Define types for fock operator
   typedef IntegralsSturmian14 idata_type;
-  typedef idata_type::matrix_type matrix_type;
   typedef idata_type::scalar_type scalar_type;
   typedef FockMatrix<idata_type> fock_type;
 
@@ -36,7 +35,7 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   debugout.write("sbb", idata.s_bb());
 
   // Use a Löwdin orthogonalised guess for now:
-  matrix_type guess = hack_guess(idata.s_bb());
+  auto guess = loewdin_guess(idata.s_bb());
   debugout.write("guess", guess);
 
   bool store_terms = true;
@@ -46,6 +45,7 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   // Allocate SCF objects:
   // PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
   DiisScfHartreeFock<decltype(fock)> scfhf(debugout);
+  scfhf.update_control_params({{"n_prev_steps", size_t(4)}});
   scfhf.solve(fock, idata.s_bb());
 }
 }  // namespace scf_dummy

@@ -1,4 +1,5 @@
 #pragma once
+#include "integrals/IntegralDataBase.hh"
 #include <gscf/PlainScf.hh>
 #include <gscf/PulayDiisScf.hh>
 #include <iostream>
@@ -7,92 +8,84 @@
 
 namespace scf_dummy {
 using namespace gscf;
+using namespace linalgwrap;
 
 template <typename Fock>
-auto pulay_error(const Fock& fock_bb,
-                 const typename Fock::stored_matrix_type& coefficients_bf,
-                 const typename Fock::stored_matrix_type& overlap_bb) ->
+auto pulay_error(
+      const Fock& fock_bb,
+      const MultiVector<const typename Fock::vector_type>& coefficients_bf,
+      const typename Fock::stored_matrix_type& overlap_bb) ->
       typename Fock::stored_matrix_type {
   typedef typename Fock::size_type size_type;
-  typedef typename Fock::stored_matrix_type matrix_type;
-
-  // Calculate Pulay scf error.
-  using namespace linalgwrap;
 
   const size_type n_alpha = fock_bb.n_alpha();
 #ifdef DEBUG
   const size_type n_beta = fock_bb.n_beta();
 #endif
-  assert_dbg(n_alpha == n_beta, linalgwrap::ExcNotImplemented());
+  assert_dbg(n_alpha == n_beta, krims::ExcNotImplemented());
 
   // Occupied coefficients
-  auto ca_bo = view::columns(coefficients_bf, range(n_alpha));
+  auto ca_bo = coefficients_bf.subview(krims::range(n_alpha));
 
-  // Density: (Factor of 2 since alpha == beta)
-  auto pa_bb = 2 * ca_bo * view::transpose(ca_bo);
+  // Form first products (Factor of 2 since alpha == beta)
+  auto Sca_bo = 2. * overlap_bb * ca_bo;
+  auto Fca_bo = fock_bb * ca_bo;
 
-  // Return error expression
-  // == S * P * F - F * P * S
-  return overlap_bb * static_cast<matrix_type>(pa_bb * fock_bb) -
-         fock_bb * (pa_bb * overlap_bb);
+  // Form the antisymmetric outer product and return it.
+  // The idea is
+  // S * P * F - F * P * S == S * C * C^T * F - F * C * C^T * S
+  //                       == (S*C) * (F*C)^T - (F*C) * (S*C)^T
+  return outer_sum(Sca_bo, Fca_bo) - outer_sum(Fca_bo, Sca_bo);
 }
 
-template <typename ScfState>
-struct PlainScfHartreeFockControl : public PlainScfControl<ScfState> {
-  typedef PlainScfControl<ScfState> base_type;
-  typedef typename base_type::scf_state_type scf_state_type;
-  typedef typename base_type::probmat_type probmat_type;
-  typedef typename base_type::scalar_type scalar_type;
-  typedef typename base_type::size_type size_type;
+template <typename FockType>
+class PlainScfHartreeFock : public PlainScf<FockType, PlainScfState<FockType>> {
+public:
+  typedef FockType fock_type;
+  typedef PlainScf<FockType, PlainScfState<FockType>> base_type;
   typedef typename base_type::matrix_type matrix_type;
-  typedef typename base_type::vector_type vector_type;
+  typedef typename matrix_type::vector_type vector_type;
+  typedef typename base_type::scalar_type scalar_type;
+  typedef typename base_type::state_type state_type;
 
-  scalar_type max_frob_pulay_error;
-
-  PlainScfHartreeFockControl() : base_type{}, max_frob_pulay_error{5e-7} {}
+  //
+  // Iteration control
+  //
+  scalar_type max_frob_pulay_error = 5e-7;
 
   /** Check convergence by checking the maxmial deviation of
    *  the last and previous eval pointers */
-  bool is_converged(const scf_state_type& s) const override {
+  bool is_converged(const state_type& s) const override {
     if (s.problem_matrix_ptr() == nullptr || s.eigenvectors_ptr() == nullptr)
       return false;
 
-    const probmat_type& fock_bb = *s.problem_matrix_ptr();
-    const matrix_type& coefficients_bf = *s.eigenvectors_ptr();
+    const fock_type& fock_bb = *s.problem_matrix_ptr();
+    const linalgwrap::MultiVector<vector_type>& coefficients_bf =
+          *s.eigenvectors_ptr();
     const matrix_type& overlap_bb = s.overlap_matrix();
 
     matrix_type error = pulay_error(fock_bb, coefficients_bf, overlap_bb);
-    return error.norm_frobenius() < max_frob_pulay_error;
+    return norm_frobenius(error) < max_frob_pulay_error;
   }
-};
 
-template <typename FockType>
-class PlainScfHartreeFock
-      : public PlainScf<FockType, PlainScfState<FockType>,
-                        PlainScfHartreeFockControl<PlainScfState<FockType>>> {
-public:
-  typedef FockType fock_type;
-  typedef PlainScf<FockType, PlainScfState<FockType>,
-                   PlainScfHartreeFockControl<PlainScfState<FockType>>>
-        base_type;
-  typedef typename base_type::scalar_type scalar_type;
-  typedef typename base_type::scf_state_type scf_state_type;
-
+  //
+  // Constructor
+  // TODO not the way we would do it now
   PlainScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
 protected:
-  void before_iteration_step(scf_state_type& s) const override {
+  void before_iteration_step(state_type& s) const override {
     std::cout << std::endl
               << "Starting SCF iteration " << s.n_iter_count() << std::endl;
   }
 
-  void on_update_eigenpairs(scf_state_type& s) const override {
+  void on_update_eigenpairs(state_type& s) const override {
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
-    assert_dbg(m_writer, linalgwrap::ExcIO());
+    assert_dbg(m_writer, krims::ExcIO());
     m_writer.write("evals" + std::to_string(s.n_iter_count()),
-                   *s.eigenvalues_ptr());
+                   make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
     m_writer.write("evecs" + std::to_string(s.n_iter_count()),
                    *s.eigenvectors_ptr());
 
@@ -103,7 +96,7 @@ protected:
     std::cout << std::endl;
   }
 
-  void on_update_problem_matrix(scf_state_type& s) const override {
+  void on_update_problem_matrix(state_type& s) const override {
     typedef typename fock_type::energies_type energies_type;
 
     auto& problem_matrix = *s.problem_matrix_ptr();
@@ -114,9 +107,9 @@ protected:
     auto n_iter = s.n_iter_count();
     std::string itstr = std::to_string(n_iter);
 
-    assert_dbg(problem_matrix.are_hf_terms_stored(),
-               linalgwrap::ExcInvalidState(
-                     "problem matrix does not store HF terms."));
+    assert_dbg(
+          problem_matrix.are_hf_terms_stored(),
+          krims::ExcInvalidState("problem matrix does not store HF terms."));
     m_writer.write("pa" + itstr, problem_matrix.hf_terms().pa_bb);
     m_writer.write("pb" + itstr, problem_matrix.hf_terms().pb_bb);
     m_writer.write("j" + itstr, problem_matrix.hf_terms().j_bb);
@@ -140,7 +133,7 @@ protected:
               << "     E_total  = " << std::setprecision(15)
               << hf_energies.energy_total << std::setprecision(prec)
               << std::endl
-              << "     pulay_error: " << error.norm_frobenius() << std::endl;
+              << "     pulay_error: " << norm_frobenius(error) << std::endl;
   }
 
 private:
@@ -156,30 +149,30 @@ public:
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename base_type::vector_type vector_type;
-  typedef typename base_type::scf_state_type scf_state_type;
+  typedef typename base_type::state_type state_type;
 
   DiisScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
 protected:
-  matrix_type calculate_error(const scf_state_type& s) const override {
+  matrix_type calculate_error(const state_type& s) const override {
     const fock_type& fock_bb = *s.problem_matrix_ptr();
-    const matrix_type& coefficients_bf = *s.eigenvectors_ptr();
+    const MultiVector<vector_type>& coefficients_bf = *s.eigenvectors_ptr();
     const matrix_type& overlap_bb = s.overlap_matrix();
     return pulay_error(fock_bb, coefficients_bf, overlap_bb);
   }
 
-  void before_iteration_step(scf_state_type& s) const override {
+  void before_iteration_step(state_type& s) const override {
     std::cout << std::endl
               << "Starting SCF iteration " << s.n_iter_count() << std::endl;
   }
 
-  void on_update_eigenpairs(scf_state_type& s) const override {
+  void on_update_eigenpairs(state_type& s) const override {
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
-    assert_dbg(m_writer, linalgwrap::ExcIO());
+    assert_dbg(m_writer, krims::ExcIO());
     m_writer.write("evals" + std::to_string(s.n_iter_count()),
-                   *s.eigenvalues_ptr());
+                   make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
     m_writer.write("evecs" + std::to_string(s.n_iter_count()),
                    *s.eigenvectors_ptr());
 
@@ -190,7 +183,7 @@ protected:
     std::cout << std::endl;
   }
 
-  void on_new_diis_diagmat(scf_state_type& s) const override {
+  void on_new_diis_diagmat(state_type& s) const override {
     if (s.diis_coefficients.size() > 0) {
       std::cout << "   DIIS coefficients:   ";
       std::copy(s.diis_coefficients.begin(), s.diis_coefficients.end(),
@@ -199,12 +192,12 @@ protected:
     }
 
     m_writer.write("diiscoeff" + std::to_string(s.n_iter_count()),
-                   s.diis_coefficients);
+                   as_multivector(s.diis_coefficients));
     m_writer.write("diisdiagmat" + std::to_string(s.n_iter_count()),
                    *s.diagonalised_matrix_ptr());
   }
 
-  void on_update_problem_matrix(scf_state_type& s) const override {
+  void on_update_problem_matrix(state_type& s) const override {
     typedef typename fock_type::energies_type energies_type;
 
     auto& problem_matrix = *s.problem_matrix_ptr();
@@ -213,9 +206,9 @@ protected:
     auto n_iter = s.n_iter_count();
     std::string itstr = std::to_string(n_iter);
 
-    assert_dbg(problem_matrix.are_hf_terms_stored(),
-               linalgwrap::ExcInvalidState(
-                     "problem matrix does not store HF terms."));
+    assert_dbg(
+          problem_matrix.are_hf_terms_stored(),
+          krims::ExcInvalidState("problem matrix does not store HF terms."));
     m_writer.write("pa" + itstr, problem_matrix.hf_terms().pa_bb);
     m_writer.write("pb" + itstr, problem_matrix.hf_terms().pb_bb);
     m_writer.write("j" + itstr, problem_matrix.hf_terms().j_bb);
@@ -240,8 +233,8 @@ protected:
               << std::endl;
   }
 
-  void after_iteration_step(scf_state_type& s) const override {
-    std::cout << "   Current DIIS error: " << s.errors.back().norm_frobenius()
+  void after_iteration_step(state_type& s) const override {
+    std::cout << "   Current DIIS error: " << norm_frobenius(s.errors.back())
               << std::endl;
     m_writer.write("diiserror" + std::to_string(s.n_iter_count()),
                    s.errors.back());

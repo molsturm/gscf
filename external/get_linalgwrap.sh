@@ -9,7 +9,7 @@
 FROM="https://github.com/linalgwrap/linalgwrap"
 
 # Branch to checkout (empty for default)
-BRANCH="master-krims"
+BRANCH=""
 
 # Folder to check it out to
 WHAT="linalgwrap"

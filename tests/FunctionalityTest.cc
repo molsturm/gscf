@@ -110,9 +110,8 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   scalar_type exp_energy_exchange = -1.736263121264314;
   scalar_type exp_energy_total = -11.38219242881645;
 
-  // Since we only converge to 5e-7, allow larger errors:
-  auto highertol = NumCompConstants::change_temporary(
-        1e-7 / std::numeric_limits<scalar_type>::epsilon());
+  // Since we only converge to 5e-7, allow errors up to this degree.
+  const double basetol = 5e-7;
 
   SECTION("PlainSCF") {
     error_wrapped_solvers::PlainScf<decltype(fock)> scf;
@@ -121,23 +120,21 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     CHECK(res.n_iter_count() < 15);
 
     // Check the eigenvalues
-    const auto evaltol = NumCompAccuracyLevel::Lower;
     const auto& evalues = *res.eigenvalues_ptr();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
-      CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(evaltol));
+      CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
     }
 
     // Check the energies:
-    const auto energytol = NumCompAccuracyLevel::Default;
     auto hf_energies = res.problem_matrix_ptr()->energies();
     CHECK(hf_energies.energy_1e_terms ==
-          numcomp(exp_energy_1e_terms).tolerance(energytol));
+          numcomp(exp_energy_1e_terms).tolerance(basetol));
     CHECK(hf_energies.energy_coulomb ==
-          numcomp(exp_energy_coulomb).tolerance(energytol));
+          numcomp(exp_energy_coulomb).tolerance(basetol));
     CHECK(hf_energies.energy_exchange ==
-          numcomp(exp_energy_exchange).tolerance(energytol));
+          numcomp(exp_energy_exchange).tolerance(basetol));
     CHECK(hf_energies.energy_total ==
-          numcomp(exp_energy_total).tolerance(energytol));
+          numcomp(exp_energy_total).tolerance(basetol));
   }  // PlainSCF
 
   SECTION("PulayDiisScf") {
@@ -148,23 +145,21 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     CHECK(res.n_iter_count() < 10);
 
     // Check the eigenvalues
-    const auto evaltol = NumCompAccuracyLevel::Lower;
     const auto& evalues = *res.eigenvalues_ptr();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
-      CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(evaltol));
+      CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
     }
 
     // Check the energies:
-    const auto energytol = NumCompAccuracyLevel::Default;
     auto hf_energies = res.problem_matrix_ptr()->energies();
     CHECK(hf_energies.energy_1e_terms ==
-          numcomp(exp_energy_1e_terms).tolerance(energytol));
+          numcomp(exp_energy_1e_terms).tolerance(basetol));
     CHECK(hf_energies.energy_coulomb ==
-          numcomp(exp_energy_coulomb).tolerance(energytol));
+          numcomp(exp_energy_coulomb).tolerance(basetol));
     CHECK(hf_energies.energy_exchange ==
-          numcomp(exp_energy_exchange).tolerance(energytol));
+          numcomp(exp_energy_exchange).tolerance(basetol));
     CHECK(hf_energies.energy_total ==
-          numcomp(exp_energy_total).tolerance(energytol));
+          numcomp(exp_energy_total).tolerance(basetol));
   }  // PulayDiisScf
 
 }  // TEST_CASE

@@ -329,11 +329,11 @@ void FockMatrix<IntegralData>::calc_exchange(
       for (size_type d = 0; d < nbas; ++d) {
         for (size_type b = 0; b < nbas; ++b) {
           // Shell pair index for d and b:
-          const size_type bd_pair = d * nbas + b;
+          const size_type db_pair = d * nbas + b;
 
           // Perform contraction:
           exch_bb(a, b) +=
-                density_bb(c, d) * m_idata_ptr->i_bbbb()(ac_pair, bd_pair);
+                density_bb(c, d) * m_idata_ptr->i_bbbb()(ac_pair, db_pair);
         }  // b
       }    // d
     }      // c

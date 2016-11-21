@@ -12,7 +12,7 @@ struct PulayDiisScfKeys : public ScfBaseKeys {
 
   /** The DIIS error which is allowed to reach convergence
    *  Type: real_type */
-  static const std::string max_diis_error;
+  static const std::string max_error_norm;
 };
 
 }  // namespace gscf

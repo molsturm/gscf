@@ -186,7 +186,7 @@ public:
   }
 
   /** Are the Hartree Fock terms stored? */
-  bool are_hf_terms_stored() const { m_store_hf_terms; }
+  bool are_hf_terms_stored() const { return m_store_hf_terms; }
 
   /** Get the number of alpha electrons */
   size_type n_alpha() const { return m_n_alpha; }

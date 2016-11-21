@@ -186,21 +186,21 @@ public:
 
   /** Maximum value the Frobenius norm of the
    *  most recent error vector/matrix may have. */
-  real_type max_diis_error = 5e-7;
+  real_type max_error_norm = 5e-7;
 
   bool is_converged(const state_type& s) const override {
     if (s.errors.empty()) return false;
 
     // Norm of the last error (s.errors.back) is below convergence
     // threshold
-    return norm_frobenius(s.errors.back()) < max_diis_error;
+    return norm_frobenius(s.errors.back()) < max_error_norm;
   }
 
   /** Update control parameters from Parameter map */
   void update_control_params(const krims::ParameterMap& map) {
     base_type::update_control_params(map);
     n_prev_steps = map.at(PulayDiisScfKeys::n_prev_steps, n_prev_steps);
-    max_diis_error = map.at(PulayDiisScfKeys::max_diis_error, max_diis_error);
+    max_error_norm = map.at(PulayDiisScfKeys::max_error_norm, max_error_norm);
   }
   ///@}
 
@@ -382,7 +382,7 @@ void PulayDiisScf<ProblemMatrix, ScfState>::update_diis_coefficients(
     // how accurate we want to have the final result and depending on
     // how large our SCF error currently is. This is just a shot
     // and currently does nothing.
-    krims::ParameterMap params{{"tolerance", max_diis_error / 100.}};
+    krims::ParameterMap params{{"tolerance", max_error_norm / 100.}};
 
     vector_type x(n_errors + 1, false);  // no initialisation
     linalgwrap::solve_hermitian(B, x, rhs, params);

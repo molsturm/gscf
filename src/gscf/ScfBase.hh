@@ -209,7 +209,8 @@ void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
   // Obtain the expected update key from the problem matrix
   // and update the problem matrix:
   const std::string key = s.problem_matrix_ptr()->scf_update_key();
-  s.problem_matrix_ptr()->update({{key, s.eigenvectors_ptr()}});
+  const auto const_evec_ptr = s.eigenvectors_ptr();
+  s.problem_matrix_ptr()->update({{key, const_evec_ptr}});
 
   on_update_problem_matrix(s);
 }

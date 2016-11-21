@@ -157,7 +157,7 @@ public:
   }
 
   /** Return the scf update key */
-  std::string scf_update_key() const { return m_update_key; }
+  const std::string& scf_update_key() const { return m_update_key; }
 
   /** Update the inner state:
    * Build the Fock matrix with the new coefficients
@@ -168,7 +168,7 @@ public:
   void update(const krims::ParameterMap& map) override {
     if (map.exists(m_update_key)) {
       build_fock_matrix_from_coefficient(
-            map.at<linalgwrap::MultiVector<vector_type>>(m_update_key));
+            map.at<const linalgwrap::MultiVector<vector_type>>(m_update_key));
     }
   }
 

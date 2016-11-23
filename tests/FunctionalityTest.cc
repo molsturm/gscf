@@ -16,13 +16,15 @@ using namespace gscfmock;
 namespace error_wrapped_solvers {
 
 template <typename FockType>
-class PlainScf : public gscf::PlainScf<FockType, PlainScfState<FockType>> {
+class PlainScf
+      : public gscf::PlainScf<
+              PlainScfState<FockType, typename FockType::stored_matrix_type>> {
 public:
   typedef FockType fock_type;
-  typedef gscf::PlainScf<FockType, PlainScfState<FockType>> base_type;
-  typedef typename base_type::matrix_type matrix_type;
+  typedef typename FockType::stored_matrix_type matrix_type;
+  typedef gscf::PlainScf<PlainScfState<FockType, matrix_type>> base_type;
   typedef typename matrix_type::vector_type vector_type;
-  typedef typename base_type::scalar_type scalar_type;
+  typedef typename matrix_type::scalar_type scalar_type;
   typedef typename base_type::state_type state_type;
 
   //! The maximal allowed error for convergence
@@ -47,13 +49,14 @@ public:
 };
 
 template <typename FockType>
-class PulayDiisScf
-      : public gscf::PulayDiisScf<FockType, PulayDiisScfState<FockType>> {
+class PulayDiisScf : public gscf::PulayDiisScf<PulayDiisScfState<
+                           FockType, typename FockType::stored_matrix_type>> {
 public:
   typedef FockType fock_type;
-  typedef gscf::PulayDiisScf<FockType, PulayDiisScfState<FockType>> base_type;
+  typedef typename fock_type::stored_matrix_type matrix_type;
+  typedef gscf::PulayDiisScf<PulayDiisScfState<FockType, matrix_type>>
+        base_type;
   typedef typename base_type::state_type state_type;
-  typedef typename state_type::matrix_type matrix_type;
 
   //! Define how we compute the error: Pulay error
   matrix_type calculate_error(const state_type& s) const override {

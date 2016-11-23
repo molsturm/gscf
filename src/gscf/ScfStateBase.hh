@@ -10,9 +10,18 @@ namespace gscf {
  *
  * \tparam ProblemMatrix The type of the Problem matrix object.
  */
-template <typename ProblemMatrix, typename DiagonalisedMatrix = ProblemMatrix>
+template <typename ProblemMatrix, typename OverlapMatrix,
+          typename DiagonalisedMatrix = ProblemMatrix>
 class ScfStateBase : public linalgwrap::SolverStateBase,
                      public linalgwrap::IterativeSolverState {
+
+  static_assert(
+        std::is_same<
+              typename linalgwrap::StoredTypeOf<ProblemMatrix>::type,
+              typename linalgwrap::StoredTypeOf<OverlapMatrix>::type>::value,
+        "The stored matrix types of OverlapMatrix and ProblemMatrix have to "
+        "agree.");
+
 public:
   /** \name Type definitions */
   ///@{
@@ -22,6 +31,9 @@ public:
    *  We assume that the Problem is Hermitian (or symmetric).
    *  */
   typedef ProblemMatrix probmat_type;
+
+  /** The type of the overlap matrix */
+  typedef OverlapMatrix overlap_type;
 
   /** The type of the matrix to be diagonalised in order to obtain
    *  the new eigenpairs in the SCF algorithm. */
@@ -43,8 +55,8 @@ public:
   typedef typename matrix_type::vector_type vector_type;
   ///@}
 
-  /** Get the overlap matrix of thc SCF problem */
-  const matrix_type& overlap_matrix() const { return *m_overlap_matrix_ptr; }
+  /** Get the overlap matrix of the SCF problem */
+  const OverlapMatrix& overlap_matrix() const { return *m_overlap_matrix_ptr; }
 
   /** Constant access to the current problem matrix, i.e. the current
    * approximation
@@ -113,7 +125,7 @@ public:
    * All other entities are given some sensible results, e.g. the
    * eigenvectors and the eigenvalues pointers are set to nullptr.
    * */
-  ScfStateBase(probmat_type prob_mat, const matrix_type& overlap_mat)
+  ScfStateBase(probmat_type prob_mat, const OverlapMatrix& overlap_mat)
         : m_overlap_matrix_ptr{krims::make_subscription(overlap_mat,
                                                         "ScfState")},
           m_problem_matrix_ptr{
@@ -130,7 +142,7 @@ public:
 
 private:
   //! The overlap matrix of the SCF problem.
-  krims::SubscriptionPointer<const matrix_type> m_overlap_matrix_ptr;
+  krims::SubscriptionPointer<const overlap_type> m_overlap_matrix_ptr;
 
   /** The current problem matrix as obtained as the approximation
    *  to the self-consistent problem matrix in this step. **/
@@ -174,9 +186,11 @@ struct IsScfState : public std::false_type {};
 
 template <typename T>
 struct IsScfState<
-      T, krims::VoidType<typename T::probmat_type, typename T::diagmat_type>>
+      T, krims::VoidType<typename T::probmat_type, typename T::overlap_type,
+                         typename T::diagmat_type>>
       : public std::is_base_of<
-              ScfStateBase<typename T::probmat_type, typename T::diagmat_type>,
+              ScfStateBase<typename T::probmat_type, typename T::overlap_type,
+                           typename T::diagmat_type>,
               T> {};
 //@}
 

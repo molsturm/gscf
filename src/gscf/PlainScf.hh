@@ -9,17 +9,19 @@ namespace gscf {
  *
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
-template <typename ProblemMatrix>
-struct PlainScfState : public ScfStateBase<ProblemMatrix, ProblemMatrix> {
-  typedef ScfStateBase<ProblemMatrix, ProblemMatrix> base_type;
+template <typename ProblemMatrix, typename OverlapMatrix>
+struct PlainScfState
+      : public ScfStateBase<ProblemMatrix, OverlapMatrix, ProblemMatrix> {
+  typedef ScfStateBase<ProblemMatrix, OverlapMatrix, ProblemMatrix> base_type;
   typedef typename base_type::probmat_type probmat_type;
+  typedef typename base_type::overlap_type overlap_type;
   typedef typename base_type::diagmat_type diagmat_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename base_type::vector_type vector_type;
 
-  PlainScfState(probmat_type probmat, const matrix_type& overlap_mat)
+  PlainScfState(probmat_type probmat, const overlap_type& overlap_mat)
         : base_type{std::move(probmat), overlap_mat} {}
 };
 
@@ -38,26 +40,29 @@ struct PlainScfState : public ScfStateBase<ProblemMatrix, ProblemMatrix> {
  *          Note that this map can be used to *select* an eigensolver as
  *          well.
  *
- * \tparam ProblemMatrix  The type of the problem matrix to be solved
- * \tparam ScfState       The precise scf state type which is available
- *                        to is_converged and all handler functions.
+ * \tparam ScfState  The precise scf state type which is available
+ *                   to is_converged and all handler functions.
+ *                   This also fixes the type of the problem matrix
+ *                   and of the overlap matrix. Should be a the class
+ *                   PulayDiisScfState or a subclass of it.
  */
-template <typename ProblemMatrix,
-          typename ScfState = PlainScfState<ProblemMatrix>>
+template <typename ScfState>
 class PlainScf : public ScfBase<ScfState> {
 public:
   typedef ScfBase<ScfState> base_type;
   typedef typename base_type::state_type state_type;
 
   typedef typename state_type::probmat_type probmat_type;
+  typedef typename state_type::overlap_type overlap_type;
+  typedef typename state_type::real_type real_type;
+  typedef typename state_type::vector_type vector_type;
   // typedef typename state_type::diagmat_type diagmat_type;
   // typedef typename state_type::scalar_type scalar_type;
-  // typedef typename state_type::size_type size_type;
   typedef typename state_type::matrix_type matrix_type;
 
-  static_assert(std::is_same<ProblemMatrix, probmat_type>::value,
-                "The ProblemMatrix type specified and the one implicit in the "
-                "ScfState class have to agree.");
+  static_assert(std::is_base_of<PlainScfState<probmat_type, overlap_type>,
+                                ScfState>::value,
+                "ScfState needs to be derived off PulayDiisScfState");
 
   /** \name Constructor */
   //@{
@@ -82,8 +87,12 @@ public:
   void solve_state(state_type& state) const override;
 };
 
-template <typename ProblemMatrix, typename ScfState>
-void PlainScf<ProblemMatrix, ScfState>::solve_state(state_type& state) const {
+//
+// ---------------------------------------------------
+//
+
+template <typename ScfState>
+void PlainScf<ScfState>::solve_state(state_type& state) const {
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);
 

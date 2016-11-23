@@ -32,6 +32,9 @@ public:
   /** The type of the problem matrix as determined by the traits */
   typedef typename state_type::probmat_type probmat_type;
 
+  /** The type of the overlap matrix as determined by the traits */
+  typedef typename state_type::overlap_type overlap_type;
+
   /** The type of the problem matrix as determined by the traits */
   typedef typename state_type::diagmat_type diagmat_type;
 
@@ -74,10 +77,10 @@ public:
    *  If the solver does not manage to achieve convergence a
    *  SolverException is thnown an the state's fail bit will be set
    *  accompanied with an appropriate fail message.
-   *
+   * as well
    **/
   virtual state_type solve(probmat_type probmat_bb,
-                           const matrix_type& overlapmat_bb) const {
+                           const overlap_type& overlapmat_bb) const {
     state_type state{std::move(probmat_bb), overlapmat_bb};
     this->solve_state(state);
     return state;
@@ -161,10 +164,6 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
                                     "s.diagonalised_matrix_ptr"));
 
   try {
-    // TODO: Think about decomposing the overlap matrix
-    //       and transforming to the orthogonal basis
-    //       for small problems here!
-
     // Solve the problem:
     const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
     auto sol = eigensystem_hermitian(diagmat, s.overlap_matrix(), n_eigenpairs,

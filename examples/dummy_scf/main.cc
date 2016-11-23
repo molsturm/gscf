@@ -25,7 +25,9 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   typedef FockMatrix<idata_type> fock_type;
 
   // Output file for mathematica debug:
-  std::ofstream mathematicafile("/tmp/debug_gscf_scfdummy_sturm14.m");
+  std::stringstream filename;
+  filename << "/tmp/debug_gscf_scfdummy_" << Z << "_" << k_exp << "_sturm14.m";
+  std::ofstream mathematicafile(filename.str());
   auto debugout = linalgwrap::io::make_formatted_stream_writer<
         linalgwrap::io::Mathematica, scalar_type>(mathematicafile, 1e-5);
 

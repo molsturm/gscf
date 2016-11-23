@@ -12,10 +12,14 @@ using namespace linalgwrap;
 using namespace gscfmock;
 
 template <typename FockType>
-class PlainScfHartreeFock : public PlainScf<FockType, PlainScfState<FockType>> {
+class PlainScfHartreeFock
+      : public PlainScf<
+              PlainScfState<FockType, typename FockType::stored_matrix_type>> {
 public:
   typedef FockType fock_type;
-  typedef PlainScf<FockType, PlainScfState<FockType>> base_type;
+  typedef PlainScf<
+        PlainScfState<FockType, typename FockType::stored_matrix_type>>
+        base_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename matrix_type::vector_type vector_type;
   typedef typename base_type::scalar_type scalar_type;
@@ -115,10 +119,14 @@ private:
 };
 
 template <typename FockType>
-class DiisScfHartreeFock : public PulayDiisScf<FockType> {
+class DiisScfHartreeFock
+      : public PulayDiisScf<PulayDiisScfState<
+              FockType, typename FockType::stored_matrix_type>> {
 public:
   typedef FockType fock_type;
-  typedef PulayDiisScf<FockType> base_type;
+  typedef PulayDiisScf<
+        PulayDiisScfState<FockType, typename FockType::stored_matrix_type>>
+        base_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::matrix_type matrix_type;

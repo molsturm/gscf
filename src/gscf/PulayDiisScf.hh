@@ -15,17 +15,18 @@ DefSolverException1(ExcDiisStepFailed, std::string, details,
  *
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
-template <typename ProblemMatrix>
+template <typename ProblemMatrix, typename OverlapMatrix>
 // TODO invent type-traits to determine "linear combination type"
 struct PulayDiisScfState
-      : public ScfStateBase<ProblemMatrix,
+      : public ScfStateBase<ProblemMatrix, OverlapMatrix,
                             linalgwrap::LazyMatrixSum<
                                   typename ProblemMatrix::stored_matrix_type>> {
   typedef ScfStateBase<
-        ProblemMatrix,
+        ProblemMatrix, OverlapMatrix,
         linalgwrap::LazyMatrixSum<typename ProblemMatrix::stored_matrix_type>>
         base_type;
   typedef typename base_type::probmat_type probmat_type;
+  typedef typename base_type::overlap_type overlap_type;
   typedef typename base_type::diagmat_type diagmat_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::size_type size_type;
@@ -81,7 +82,7 @@ struct PulayDiisScfState
   vector_type diis_coefficients;
 
   /** Construct an empty state, where all Circular buffers hold no elements */
-  PulayDiisScfState(probmat_type probmat, const matrix_type& overlap_mat)
+  PulayDiisScfState(probmat_type probmat, const overlap_type& overlap_mat)
         : base_type{std::move(probmat), overlap_mat},
           prev_eigenvectors_ptrs{0},
           prev_eigenvalues_ptrs{0},
@@ -133,25 +134,25 @@ struct PulayDiisScfState
  *          well.
  *   - n_prev_steps: The number of steps to consider in the DIIS.
  *                   (Default: 5)
- *   - max_diis_error:  If the Frobenius norm of the most recent error
+ *   - max_error_norm:  If the Frobenius norm of the most recent error
  *                      vector/matrix computed by ``calculate_error``
  *                      is below this value, we consider the iteration
  *                      converged.
  *
- * \tparam ProblemMatrix  The type of the problem matrix to be solved
- * \tparam ScfState       The precise scf state type which is available
- *                        to is_converged and all handler functions.
- * \tparam ScfControl     The scf control type which contains parameters
- *                        as well as functionality to check convergence.
+ * \tparam ScfState  The precise scf state type which is available
+ *                   to is_converged and all handler functions.
+ *                   This also fixes the type of the problem matrix
+ *                   and of the overlap matrix. Should be a the class
+ *                   PulayDiisScfState or a subclass of it.
  */
-template <typename ProblemMatrix,
-          typename ScfState = PulayDiisScfState<ProblemMatrix>>
+template <typename ScfState>
 class PulayDiisScf : public ScfBase<ScfState> {
 public:
   typedef ScfBase<ScfState> base_type;
   typedef typename base_type::state_type state_type;
 
   typedef typename state_type::probmat_type probmat_type;
+  typedef typename state_type::overlap_type overlap_type;
   typedef typename state_type::diagmat_type diagmat_type;
   typedef typename state_type::scalar_type scalar_type;
   typedef typename state_type::real_type real_type;
@@ -159,13 +160,9 @@ public:
   typedef typename state_type::matrix_type matrix_type;
   typedef typename state_type::vector_type vector_type;
 
-  static_assert(std::is_same<ProblemMatrix, probmat_type>::value,
-                "The ProblemMatrix type specified and the one implicit in the "
-                "ScfState class have to agree.");
-
-  static_assert(
-        std::is_base_of<PulayDiisScfState<ProblemMatrix>, ScfState>::value,
-        "ScfState needs to be derived off PulayDiisScfState");
+  static_assert(std::is_base_of<PulayDiisScfState<probmat_type, overlap_type>,
+                                ScfState>::value,
+                "ScfState needs to be derived off PulayDiisScfState");
 
 public:
   /** \name Constructor */
@@ -285,9 +282,8 @@ protected:
 // ------------------------------------------
 //
 
-template <typename ProblemMatrix, typename ScfState>
-void PulayDiisScf<ProblemMatrix, ScfState>::solve_state(
-      state_type& state) const {
+template <typename ScfState>
+void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
   // Resize the buffers in the state to hold
   // the appropriate number of recent SCF steps
   state.resize_buffers(n_prev_steps);
@@ -322,10 +318,9 @@ void PulayDiisScf<ProblemMatrix, ScfState>::solve_state(
   }
 }
 
-template <typename ProblemMatrix, typename ScfState>
-typename PulayDiisScf<ProblemMatrix, ScfState>::matrix_type
-PulayDiisScf<ProblemMatrix, ScfState>::diis_linear_system_matrix(
-      const state_type& s) const {
+template <typename ScfState>
+typename PulayDiisScf<ScfState>::matrix_type
+PulayDiisScf<ScfState>::diis_linear_system_matrix(const state_type& s) const {
   size_type n_errors = s.error_overlaps.size();
 
   // The B Matrix of the DIIS (system matrix of the linear system to be solved)
@@ -352,9 +347,8 @@ PulayDiisScf<ProblemMatrix, ScfState>::diis_linear_system_matrix(
   return B;
 }
 
-template <typename ProblemMatrix, typename ScfState>
-void PulayDiisScf<ProblemMatrix, ScfState>::update_diis_coefficients(
-      state_type& s) const {
+template <typename ScfState>
+void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
   size_type n_errors = s.error_overlaps.size();
 
   if (n_errors == 0) {
@@ -398,9 +392,8 @@ void PulayDiisScf<ProblemMatrix, ScfState>::update_diis_coefficients(
   }
 }
 
-template <typename ProblemMatrix, typename ScfState>
-void PulayDiisScf<ProblemMatrix, ScfState>::update_diis_diagmat(
-      state_type& s) const {
+template <typename ScfState>
+void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
   using namespace linalgwrap;
   using namespace krims;
   assert_dbg(s.prev_problem_matrix_ptrs.size() == s.diis_coefficients.size(),
@@ -430,9 +423,9 @@ void PulayDiisScf<ProblemMatrix, ScfState>::update_diis_diagmat(
   on_new_diis_diagmat(s);
 }
 
-template <typename ProblemMatrix, typename ScfState>
-typename PulayDiisScf<ProblemMatrix, ScfState>::matrix_type PulayDiisScf<
-      ProblemMatrix, ScfState>::calculate_error(const state_type& s) const {
+template <typename ScfState>
+typename PulayDiisScf<ScfState>::matrix_type
+PulayDiisScf<ScfState>::calculate_error(const state_type& s) const {
   typedef linalgwrap::MultiVector<vector_type> mvec_type;
   const mvec_type& prev_evec = *s.prev_eigenvectors_ptrs.back();
   const mvec_type& cur_evec = *s.eigenvectors_ptr();
@@ -451,9 +444,8 @@ typename PulayDiisScf<ProblemMatrix, ScfState>::matrix_type PulayDiisScf<
   return ret;
 }
 
-template <typename ProblemMatrix, typename ScfState>
-void PulayDiisScf<ProblemMatrix, ScfState>::append_new_overlaps(
-      state_type& s) const {
+template <typename ScfState>
+void PulayDiisScf<ScfState>::append_new_overlaps(state_type& s) const {
   // The errors in s.errors are ordered from oldest(front) to newest(back)
   // In the overlap vector we need the order
   //      <n|n>, <n|n-1>, <n|n-m+1>, ..., <n|n-m>

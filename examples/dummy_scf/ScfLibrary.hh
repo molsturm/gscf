@@ -55,17 +55,16 @@ public:
 protected:
   void before_iteration_step(state_type& s) const override {
     std::cout << std::endl
-              << "Starting SCF iteration " << s.n_iter_count() << std::endl;
+              << "Starting SCF iteration " << s.n_iter() << std::endl;
   }
 
   void on_update_eigenpairs(state_type& s) const override {
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
     assert_dbg(m_writer, krims::ExcIO());
-    m_writer.write("evals" + std::to_string(s.n_iter_count()),
+    m_writer.write("evals" + std::to_string(s.n_iter()),
                    make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
-    m_writer.write("evecs" + std::to_string(s.n_iter_count()),
-                   *s.eigenvectors_ptr());
+    m_writer.write("evecs" + std::to_string(s.n_iter()), *s.eigenvectors_ptr());
 
     // Print orbital evals:
     std::ostream_iterator<scalar_type> out_it(std::cout, " ");
@@ -82,7 +81,7 @@ protected:
                              s.overlap_matrix());
     energies_type hf_energies = problem_matrix.energies();
 
-    auto n_iter = s.n_iter_count();
+    auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(
@@ -146,17 +145,16 @@ protected:
 
   void before_iteration_step(state_type& s) const override {
     std::cout << std::endl
-              << "Starting SCF iteration " << s.n_iter_count() << std::endl;
+              << "Starting SCF iteration " << s.n_iter() << std::endl;
   }
 
   void on_update_eigenpairs(state_type& s) const override {
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
     assert_dbg(m_writer, krims::ExcIO());
-    m_writer.write("evals" + std::to_string(s.n_iter_count()),
+    m_writer.write("evals" + std::to_string(s.n_iter()),
                    make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
-    m_writer.write("evecs" + std::to_string(s.n_iter_count()),
-                   *s.eigenvectors_ptr());
+    m_writer.write("evecs" + std::to_string(s.n_iter()), *s.eigenvectors_ptr());
 
     // Print orbital evals:
     std::ostream_iterator<scalar_type> out_it(std::cout, " ");
@@ -173,9 +171,9 @@ protected:
       std::cout << std::endl;
     }
 
-    m_writer.write("diiscoeff" + std::to_string(s.n_iter_count()),
+    m_writer.write("diiscoeff" + std::to_string(s.n_iter()),
                    as_multivector(s.diis_coefficients));
-    m_writer.write("diisdiagmat" + std::to_string(s.n_iter_count()),
+    m_writer.write("diisdiagmat" + std::to_string(s.n_iter()),
                    *s.diagonalised_matrix_ptr());
   }
 
@@ -185,7 +183,7 @@ protected:
     auto& problem_matrix = *s.problem_matrix_ptr();
     energies_type hf_energies = problem_matrix.energies();
 
-    auto n_iter = s.n_iter_count();
+    auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(
@@ -218,9 +216,8 @@ protected:
   void after_iteration_step(state_type& s) const override {
     std::cout << "   Current DIIS error: " << norm_frobenius(s.errors.back())
               << std::endl;
-    m_writer.write("diiserror" + std::to_string(s.n_iter_count()),
-                   s.errors.back());
-    m_writer.write("diislinsysmat" + std::to_string(s.n_iter_count()),
+    m_writer.write("diiserror" + std::to_string(s.n_iter()), s.errors.back());
+    m_writer.write("diislinsysmat" + std::to_string(s.n_iter()),
                    base_type::diis_linear_system_matrix(s));
   }
 

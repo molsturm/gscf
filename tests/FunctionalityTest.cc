@@ -107,6 +107,36 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
         0.3727105903195644,  0.3727105903195644,  0.3761196059870835,
         0.3835526231630215,  0.3835526231630215};
 
+  // The expected eigenvectors
+  MultiVector<vector_type> evec_expected{
+        {-1.1884746467844811, 0., -0.24288050447076578, 0., 0.,
+         0.16813161525502301, 0., 0., 0., 0., 0., 0.016396171817405908, 0., 0.},
+        {-1.064786764522789, 0., 0.8777407505081162, 0., 0.,
+         -0.3081669311487548, 0., 0., 0., 0., 0., -0.028869768632584114, 0.,
+         0.},
+        {0., 0., 0., -3.69049544150639e-9, 0.8573394853277652, 0., 0., 0., 0.,
+         0., 0., 0., 0.00002919059875836615, -0.6818863586007807},
+        {0., 0.9857660367413854, 0., 0., 0., 0., 0., 0., 0.47777120131625944,
+         0., 0., 0., 0., 0.},
+        {0., 0., 0., 0.8573394853277649, 3.69049544151069e-9, 0., 0., 0., 0.,
+         0., 0., 0., -0.6818863586007805, -0.000029190598758366127},
+        {-0.5840485708369669, 0., 0.05174625401524502, 0., 0.,
+         -1.0729001918355632, 0., 0., 0., 0., 0., -0.07137766077631158, 0., 0.},
+        {0., 0., 0., 1.1728582480320243e-9, -0.27246685510597846, 0., 0., 0.,
+         0., 0., 0., 0., 0.000045420745388700296, -1.0610192320620837},
+        {0., -0.033706141181753996, 0., 0., 0., 0., 0., 0., 1.0949264340797673,
+         0., 0., 0., 0., 0.},
+        {0., 0., 0., -0.2724668551059781, -1.1728582480253274e-9, 0., 0., 0.,
+         0., 0., 0., 0., -1.0610192320620837, -0.00004542074538870031},
+        {0., 0., 0., 0., 0., 0., -1., 0., 0., 0., 0., 0., 0., 0.},
+        {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.000043369360575274524,
+         0.9999999990595501, 0., 0., 0.},
+        {-0.0019206466502236202, 0., -0.011672197660675484, 0., 0.,
+         0.06685683586559842, 0., 0., 0., 0., 0., -0.9976924548257627, 0., 0.},
+        {0., 0., 0., 0., 0., 0., 0., 0., 0., -0.9999999990595487,
+         0.00004336936057527441, 0., 0., 0.},
+        {0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.}};
+
   // The expected energies:
   scalar_type exp_energy_1e_terms = -14.91401133311085;
   scalar_type exp_energy_coulomb = 5.268082025558712;
@@ -120,12 +150,20 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     error_wrapped_solvers::PlainScf<decltype(fock)> scf;
     auto res = scf.solve(fock, idata.s_bb());
 
-    CHECK(res.n_iter_count() < 15);
+    CHECK(res.n_iter() < 15);
 
     // Check the eigenvalues
     const auto& evalues = *res.eigenvalues_ptr();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
       CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
+    }
+
+    const auto& evectors = *res.eigenvectors_ptr();
+    // TODO For comparing all of them one needs to take rotations
+    //      inside degenerate subspaces into account
+    for (size_t i = 0; i < n_alpha; ++i) {
+      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
     }
 
     // Check the energies:
@@ -145,12 +183,21 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
           {{"n_prev_steps", size_t(4)}});
     auto res = scf.solve(fock, idata.s_bb());
 
-    CHECK(res.n_iter_count() < 10);
+    CHECK(res.n_iter() < 8);
 
     // Check the eigenvalues
     const auto& evalues = *res.eigenvalues_ptr();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
       CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
+    }
+
+    const auto& evectors = *res.eigenvectors_ptr();
+    // TODO For comparing all of them one needs to take rotations
+    //      inside degenerate subspaces into account
+    for (size_t i = 0; i < n_alpha; ++i) {
+      INFO("Comparing vector " + std::to_string(i));
+      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
     }
 
     // Check the energies:

@@ -5,8 +5,6 @@
 
 namespace gscf {
 
-// TODO Compute and use S^{-0.5} for small problem sizes
-
 DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
                     << "The SCF procedure failed to converge, since an inner "
                        "eigensolver failed: "
@@ -163,9 +161,9 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
                                     "matrix pointer inside "
                                     "s.diagonalised_matrix_ptr"));
 
+  const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
   try {
     // Solve the problem:
-    const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
     auto sol = eigensystem_hermitian(diagmat, s.overlap_matrix(), n_eigenpairs,
                                      eigensolver_params);
 
@@ -173,11 +171,35 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
     s.eigenvectors_ptr() = sol.evectors_ptr;
     s.eigenvalues_ptr() = sol.evalues_ptr;
   } catch (const linalgwrap::SolverException& e) {
-    std::stringstream ss;
-    e.print_extra(ss);
-    solver_assert(false, s, ExcInnerEigensolverFailed(ss.str()));
-  }
+#ifdef DEBUG
+    try {
+      if (diagmat.n_cols() < 1000) {
+        std::cerr << "The inner eigensolver failed";
+        // Overwrite user method selection:
+        krims::ParameterMap copy(eigensolver_params);
+        copy.update("method", "auto");
 
+        // Solve for full spectrum:
+        const auto all = linalgwrap::Constants<size_t>::all;
+        auto solresq =
+              eigensystem_hermitian(diagmat, s.overlap_matrix(), all, copy);
+
+        std::cerr << "  ...  full eigenspectrum of problem:" << std::endl
+                  << std::endl;
+        std::cerr << "       ";
+        std::ostream_iterator<scalar_type> out_it(std::cerr, "  ");
+        std::copy(std::begin(solresq.evalues()), std::end(solresq.evalues()),
+                  out_it);
+        std::cerr << std::endl << std::endl;
+      }
+    } catch (...) {
+      std::cerr << "   ...  but the attempt to solve for the full spectrum "
+                   "failed as well."
+                << std::endl;
+    }
+#endif  // DEBUG
+    solver_assert(false, s, ExcInnerEigensolverFailed(e.extra()));
+  }
   // Call the handler
   on_update_eigenpairs(s);
 }

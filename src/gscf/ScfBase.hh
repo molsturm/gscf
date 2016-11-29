@@ -236,7 +236,7 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
 
     // Update our state:
     s.eigensolution() = state.eigensolution();
-    s.n_eigenproblem_iter = state.n_iter();
+    s.n_eigenproblem_iter() = state.n_iter();
   } catch (const linalgwrap::SolverException& e) {
 #ifdef DEBUG
     try {

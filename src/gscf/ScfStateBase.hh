@@ -97,7 +97,8 @@ public:
 
   /** Number of iterations the most recent eigensolver invocation needed
    *  to solve the problem. */
-  size_t n_eigenproblem_iter;
+  size_t n_eigenproblem_iter() const { return m_n_eigenproblem_iter; }
+  size_t& n_eigenproblem_iter() { return m_n_eigenproblem_iter; }
 
   /** Norm of the last error as computed by the SCF's calculate_error
    *  function */
@@ -113,11 +114,11 @@ public:
   ScfStateBase(probmat_type prob_mat, const OverlapMatrix& overlap_mat)
         : linalgwrap::IterativeStateWrapper<
                 linalgwrap::SolverStateBase>{linalgwrap::SolverStateBase()},
-          n_eigenproblem_iter(0),
           last_error_norm{linalgwrap::Constants<real_type>::invalid},
           problem_matrix_ptr{
                 std::make_shared<probmat_type>(std::move(prob_mat))},
           diagonalised_matrix_ptr{nullptr},
+          m_n_eigenproblem_iter(0),
           m_overlap_matrix_ptr{
                 krims::make_subscription(overlap_mat, "ScfState")},
           m_eigensolution{} {
@@ -144,6 +145,9 @@ public:
   std::shared_ptr<diagmat_type> diagonalised_matrix_ptr;
   ///@}
 private:
+  /** Number of iterations the most recent eigensolver took */
+  size_t m_n_eigenproblem_iter;
+
   //! The overlap matrix of the SCF problem.
   krims::SubscriptionPointer<const overlap_type> m_overlap_matrix_ptr;
 

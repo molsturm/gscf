@@ -82,24 +82,14 @@ struct PulayDiisScfState
   vector_type diis_coefficients;
 
   /** Construct an empty state, where all Circular buffers hold no elements */
-  PulayDiisScfState(probmat_type probmat, const overlap_type& overlap_mat)
-        : base_type{std::move(probmat), overlap_mat},
-          prev_eigenvectors_ptrs{0},
-          prev_eigenvalues_ptrs{0},
-          prev_problem_matrix_ptrs{0},
-          errors{0},
-          error_overlaps{0},
-          diis_coefficients(0) {}
+  PulayDiisScfState(probmat_type probmat, const overlap_type& overlap_mat);
+
+  /** Initialise from base state */
+  PulayDiisScfState(const base_type& old_state);
 
   /** Resize all circular buffers to hold up to the given number
    * of previous SCF steps */
-  void resize_buffers(const size_type n_prev_steps) {
-    prev_eigenvectors_ptrs.max_size(n_prev_steps);
-    prev_eigenvalues_ptrs.max_size(n_prev_steps);
-    prev_problem_matrix_ptrs.max_size(n_prev_steps);
-    errors.max_size(n_prev_steps);
-    error_overlaps.max_size(n_prev_steps);
-  }
+  void resize_buffers(const size_type n_prev_steps);
 };
 
 /** \name Pulay DIIS SCF algorithm
@@ -137,7 +127,7 @@ struct PulayDiisScfState
  *   - max_error_norm:  If the Frobenius norm of the most recent error
  *                      vector/matrix computed by ``calculate_error``
  *                      is below this value, we consider the iteration
- *                      converged.
+ *                      converged (default: 5e-7)
  *
  * \tparam ScfState  The precise scf state type which is available
  *                   to is_converged and all handler functions.
@@ -181,23 +171,18 @@ public:
   //! The number of previous scf steps to consider
   size_type n_prev_steps = 5;
 
-  /** Maximum value the Frobenius norm of the
-   *  most recent error vector/matrix may have. */
-  real_type max_error_norm = 5e-7;
-
-  bool is_converged(const state_type& s) const override {
-    if (s.errors.empty()) return false;
-
-    // Norm of the last error (s.errors.back) is below convergence
-    // threshold
-    return norm_frobenius(s.errors.back()) < max_error_norm;
-  }
-
   /** Update control parameters from Parameter map */
   void update_control_params(const krims::ParameterMap& map) {
     base_type::update_control_params(map);
     n_prev_steps = map.at(PulayDiisScfKeys::n_prev_steps, n_prev_steps);
-    max_error_norm = map.at(PulayDiisScfKeys::max_error_norm, max_error_norm);
+  }
+
+  /** Get the current settings of all internal control parameters and
+   *  update the ParameterMap accordingly.
+   */
+  void get_control_params(krims::ParameterMap& map) const {
+    base_type::get_control_params(map);
+    map.update(PulayDiisScfKeys::n_prev_steps, n_prev_steps);
   }
   ///@}
 
@@ -213,7 +198,7 @@ protected:
   /* Handler which is called once the new guess for the self-consistent
    * problem matrix has been formed by the DIIS.
    *
-   * \note The guess can be obtained via state.diagonalised_matrix_ptr().
+   * \note The guess can be obtained via state.diagonalised_matrix().
    * */
   virtual void on_new_diis_diagmat(state_type&) const {}
   ///@}
@@ -227,7 +212,11 @@ protected:
    * \note This function is called once the updated problem matrix has
    * been obtained.
    **/
-  virtual matrix_type calculate_error(const state_type& s) const;
+  virtual matrix_type calculate_error(const state_type& s) const override;
+
+  /** Compute the norm of the most recent entry (i.e. the back) of the
+   * errors buffer */
+  void update_last_error_norm(state_type& s) const;
 
   /** Calculate the overlap between the most recent error matrix and
    * all previous error matrices, which are stored.
@@ -279,14 +268,82 @@ protected:
 };
 
 //
+// ---------------------------------------------------------------
+//
+
+template <typename ProblemMatrix, typename OverlapMatrix>
+PulayDiisScfState<ProblemMatrix, OverlapMatrix>::PulayDiisScfState(
+      probmat_type probmat, const overlap_type& overlap_mat)
+      : base_type{std::move(probmat), overlap_mat},
+        prev_eigenvectors_ptrs{0},
+        prev_eigenvalues_ptrs{0},
+        prev_problem_matrix_ptrs{0},
+        errors{0},
+        error_overlaps{0},
+        diis_coefficients(0) {}
+
+template <typename ProblemMatrix, typename OverlapMatrix>
+PulayDiisScfState<ProblemMatrix, OverlapMatrix>::PulayDiisScfState(
+      const base_type& old_state)
+      : base_type(old_state),
+        prev_eigenvectors_ptrs{1},
+        prev_eigenvalues_ptrs{1},
+        prev_problem_matrix_ptrs{1},
+        errors{1},
+        error_overlaps{1},
+        diis_coefficients(1) {
+  // TODO This has never been tested.
+  assert_sufficiently_tested(false);
+
+  prev_eigenvectors_ptrs.push_back(old_state.eigenvectors_ptr());
+  prev_eigenvalues_ptrs.push_back(old_state.eigenvalues_ptr());
+  prev_problem_matrix_ptrs.push_back(old_state.problem_matrix_ptr());
+
+  // Errors, error_overlaps and diis_coefficients we cannot do here.
+  // This will be done at the beginning of the solve process below.
+}
+
+template <typename ProblemMatrix, typename OverlapMatrix>
+void PulayDiisScfState<ProblemMatrix, OverlapMatrix>::resize_buffers(
+      const size_type n_prev_steps) {
+  prev_eigenvectors_ptrs.max_size(n_prev_steps);
+  prev_eigenvalues_ptrs.max_size(n_prev_steps);
+  prev_problem_matrix_ptrs.max_size(n_prev_steps);
+  errors.max_size(n_prev_steps);
+  error_overlaps.max_size(n_prev_steps);
+}
+
+//
 // ------------------------------------------
 //
 
 template <typename ScfState>
 void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
+  assert_dbg(!state.is_failed(),
+             krims::ExcInvalidState("Cannot solve a failed state"));
+
   // Resize the buffers in the state to hold
   // the appropriate number of recent SCF steps
   state.resize_buffers(n_prev_steps);
+
+  /** TODO
+  if (state.start_from_other_scf == true) {
+    state.start_from_other_scf = false;
+
+    assert_dbg(state.errors.size() == 0, krims::ExcInternalError());
+    assert_dbg(state.error_overlaps.size() == 0, krims::ExcInternalError());
+    assert_dbg(state.prev_problem_matrix_ptrs.size() == 1,
+               krims::ExcInternalError());
+    assert_dbg(state.prev_eigenvalues_ptrs.size() == 1,
+               krims::ExcInternalError());
+    assert_dbg(state.prev_eigenvectors_ptrs.size() == 1,
+               krims::ExcInternalError());
+
+    // Compute errors and error overlaps for other scf:
+    state.errors.push_back(calculate_error(state));
+    append_new_overlaps(state);
+  }
+  */
 
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);
@@ -297,21 +354,22 @@ void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
 
     // Solve the eigensystem of the DIIS guess and push back results
     base_type::update_eigenpairs(state);
-    state.prev_eigenvectors_ptrs.push_back(state.eigenvectors_ptr());
-    state.prev_eigenvalues_ptrs.push_back(state.eigenvalues_ptr());
+    state.prev_eigenvectors_ptrs.push_back(state.eigensolution().evectors_ptr);
+    state.prev_eigenvalues_ptrs.push_back(state.eigensolution().evalues_ptr);
 
     // The DIIS guess (stored in the diagonalised_matrix_ptr)
     // may contain copies of all operators in history.
     // To release the memory of what we don't need any more,
     // we reset it at this stage
-    state.diagonalised_matrix_ptr().reset();
+    state.diagonalised_matrix_ptr.reset();
 
     // Form the new problem matrix and append to the history
     base_type::update_problem_matrix(state);
-    state.prev_problem_matrix_ptrs.push_back(state.problem_matrix_ptr());
+    state.prev_problem_matrix_ptrs.push_back(state.problem_matrix_ptr);
 
     // Compute new errors and error overlaps.
     state.errors.push_back(calculate_error(state));
+    update_last_error_norm(state);
     append_new_overlaps(state);
 
     base_type::end_iteration_step(state);
@@ -376,7 +434,7 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
     // how accurate we want to have the final result and depending on
     // how large our SCF error currently is. This is just a shot
     // and currently does nothing.
-    krims::ParameterMap params{{"tolerance", max_error_norm / 100.}};
+    krims::ParameterMap params{{"tolerance", base_type::max_error_norm / 100.}};
 
     vector_type x(n_errors + 1, false);  // no initialisation
     linalgwrap::solve_hermitian(B, x, rhs, params);
@@ -400,14 +458,13 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
              ExcInternalError());
 
   // Initialise an empty matrix for the DIIS guess in the state:
-  s.diagonalised_matrix_ptr() = std::make_shared<diagmat_type>();
+  s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>();
 
   // Build DIIS guess matrix to be diagonalised:
-  diagmat_type& new_diis_guess = *s.diagonalised_matrix_ptr();
   if (s.diis_coefficients.size() == 0) {
     assert_dbg(s.error_overlaps.size() == 0, ExcInternalError());
     // This is the first run and there are no coefficients:
-    new_diis_guess += *s.problem_matrix_ptr();
+    (*s.diagonalised_matrix_ptr) += s.problem_matrix();
   } else {
     // Form linear combination according to coefficients:
     auto probmat_pit = std::begin(s.prev_problem_matrix_ptrs);
@@ -415,7 +472,7 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
     for (; probmat_pit != std::end(s.prev_problem_matrix_ptrs);
          ++probmat_pit, ++i) {
       const probmat_type& mat = **probmat_pit;
-      new_diis_guess += s.diis_coefficients[i] * mat;
+      (*s.diagonalised_matrix_ptr) += s.diis_coefficients[i] * mat;
     }
     assert_dbg(i == s.diis_coefficients.size(), ExcInternalError());
   }
@@ -428,7 +485,7 @@ typename PulayDiisScf<ScfState>::matrix_type
 PulayDiisScf<ScfState>::calculate_error(const state_type& s) const {
   typedef linalgwrap::MultiVector<vector_type> mvec_type;
   const mvec_type& prev_evec = *s.prev_eigenvectors_ptrs.back();
-  const mvec_type& cur_evec = *s.eigenvectors_ptr();
+  const mvec_type& cur_evec = s.eigensolution().evectors();
 
   // TODO until something better exists in linalgwrap
   // (like setting individual columns or so)
@@ -442,6 +499,11 @@ PulayDiisScf<ScfState>::calculate_error(const state_type& s) const {
   }    // j == col
 
   return ret;
+}
+
+template <typename ScfState>
+void PulayDiisScf<ScfState>::update_last_error_norm(state_type& s) const {
+  s.last_error_norm = norm_frobenius(s.errors.back());
 }
 
 template <typename ScfState>

@@ -26,26 +26,6 @@ public:
   typedef typename base_type::state_type state_type;
 
   //
-  // Iteration control
-  //
-  scalar_type max_frob_pulay_error = 5e-7;
-
-  /** Check convergence by checking the maxmial deviation of
-   *  the last and previous eval pointers */
-  bool is_converged(const state_type& s) const override {
-    if (s.problem_matrix_ptr() == nullptr || s.eigenvectors_ptr() == nullptr)
-      return false;
-
-    const fock_type& fock_bb = *s.problem_matrix_ptr();
-    const linalgwrap::MultiVector<vector_type>& coefficients_bf =
-          *s.eigenvectors_ptr();
-    const matrix_type& overlap_bb = s.overlap_matrix();
-
-    matrix_type error = pulay_error(fock_bb, coefficients_bf, overlap_bb);
-    return norm_frobenius(error) < max_frob_pulay_error;
-  }
-
-  //
   // Constructor
   // TODO not the way we would do it now
   // => we need a way to feed the solver with a ParameterMap
@@ -53,6 +33,13 @@ public:
         : m_writer(writer) {}
 
 protected:
+  matrix_type calculate_error(const state_type& s) const override {
+    const auto& fock_bb = s.problem_matrix();
+    const auto& coefficients_bf = s.eigensolution().evectors();
+    const auto& overlap_bb = s.overlap_matrix();
+    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+  }
+
   void before_iteration_step(state_type& s) const override {
     std::cout << std::endl
               << "Starting SCF iteration " << s.n_iter() << std::endl;
@@ -62,38 +49,39 @@ protected:
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
     assert_dbg(m_writer, krims::ExcIO());
+    const auto& evalues = s.eigensolution().evalues();
+    auto evectors = s.eigensolution().evectors();
+
     m_writer.write("evals" + std::to_string(s.n_iter()),
-                   make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
-    m_writer.write("evecs" + std::to_string(s.n_iter()), *s.eigenvectors_ptr());
+                   make_as_multivector<vector_type>(evalues));
+    m_writer.write("evecs" + std::to_string(s.n_iter()), evectors);
 
     // Print orbital evals:
     std::ostream_iterator<scalar_type> out_it(std::cout, " ");
     std::cout << "        ";
-    std::copy(s.eigenvalues_ptr()->begin(), s.eigenvalues_ptr()->end(), out_it);
+    std::copy(evalues.begin(), evalues.end(), out_it);
     std::cout << std::endl;
   }
 
   void on_update_problem_matrix(state_type& s) const override {
     typedef typename fock_type::energies_type energies_type;
 
-    auto& problem_matrix = *s.problem_matrix_ptr();
-    auto error = pulay_error(problem_matrix, *s.eigenvectors_ptr(),
-                             s.overlap_matrix());
-    energies_type hf_energies = problem_matrix.energies();
+    auto error = calculate_error(s);
+    energies_type hf_energies = s.problem_matrix().energies();
 
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(
-          problem_matrix.are_hf_terms_stored(),
+          s.problem_matrix().are_hf_terms_stored(),
           krims::ExcInvalidState("problem matrix does not store HF terms."));
-    m_writer.write("pa" + itstr, problem_matrix.hf_terms().pa_bb);
-    m_writer.write("pb" + itstr, problem_matrix.hf_terms().pb_bb);
-    m_writer.write("j" + itstr, problem_matrix.hf_terms().j_bb);
-    m_writer.write("ka" + itstr, problem_matrix.hf_terms().ka_bb);
-    m_writer.write("ka" + itstr, problem_matrix.hf_terms().ka_bb);
-    m_writer.write("kb" + itstr, problem_matrix.hf_terms().kb_bb);
-    m_writer.write("fock" + itstr, problem_matrix);
+    m_writer.write("pa" + itstr, s.problem_matrix().hf_terms().pa_bb);
+    m_writer.write("pb" + itstr, s.problem_matrix().hf_terms().pb_bb);
+    m_writer.write("j" + itstr, s.problem_matrix().hf_terms().j_bb);
+    m_writer.write("ka" + itstr, s.problem_matrix().hf_terms().ka_bb);
+    m_writer.write("ka" + itstr, s.problem_matrix().hf_terms().ka_bb);
+    m_writer.write("kb" + itstr, s.problem_matrix().hf_terms().kb_bb);
+    m_writer.write("fock" + itstr, s.problem_matrix());
     m_writer.write("error" + itstr, error);
 
     std::streamsize prec = std::cout.precision();
@@ -137,8 +125,9 @@ public:
 
 protected:
   matrix_type calculate_error(const state_type& s) const override {
-    const fock_type& fock_bb = *s.problem_matrix_ptr();
-    const MultiVector<vector_type>& coefficients_bf = *s.eigenvectors_ptr();
+    const fock_type& fock_bb = s.problem_matrix();
+    const MultiVector<vector_type>& coefficients_bf =
+          s.eigensolution().evectors();
     const matrix_type& overlap_bb = s.overlap_matrix();
     return pulay_error(fock_bb, coefficients_bf, overlap_bb);
   }
@@ -152,14 +141,17 @@ protected:
     std::cout << "   New orbital eigenvalues: " << std::endl;
 
     assert_dbg(m_writer, krims::ExcIO());
+    const auto& evalues = s.eigensolution().evalues();
+    auto evectors = s.eigensolution().evectors();
+
     m_writer.write("evals" + std::to_string(s.n_iter()),
-                   make_as_multivector<vector_type>(*s.eigenvalues_ptr()));
-    m_writer.write("evecs" + std::to_string(s.n_iter()), *s.eigenvectors_ptr());
+                   make_as_multivector<vector_type>(evalues));
+    m_writer.write("evecs" + std::to_string(s.n_iter()), evectors);
 
     // Print orbital evals:
     std::ostream_iterator<scalar_type> out_it(std::cout, " ");
     std::cout << "        ";
-    std::copy(s.eigenvalues_ptr()->begin(), s.eigenvalues_ptr()->end(), out_it);
+    std::copy(evalues.begin(), evalues.end(), out_it);
     std::cout << std::endl;
   }
 
@@ -174,28 +166,27 @@ protected:
     m_writer.write("diiscoeff" + std::to_string(s.n_iter()),
                    as_multivector(s.diis_coefficients));
     m_writer.write("diisdiagmat" + std::to_string(s.n_iter()),
-                   *s.diagonalised_matrix_ptr());
+                   s.diagonalised_matrix());
   }
 
   void on_update_problem_matrix(state_type& s) const override {
     typedef typename fock_type::energies_type energies_type;
 
-    auto& problem_matrix = *s.problem_matrix_ptr();
-    energies_type hf_energies = problem_matrix.energies();
+    energies_type hf_energies = s.problem_matrix().energies();
 
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(
-          problem_matrix.are_hf_terms_stored(),
+          s.problem_matrix().are_hf_terms_stored(),
           krims::ExcInvalidState("problem matrix does not store HF terms."));
-    m_writer.write("pa" + itstr, problem_matrix.hf_terms().pa_bb);
-    m_writer.write("pb" + itstr, problem_matrix.hf_terms().pb_bb);
-    m_writer.write("j" + itstr, problem_matrix.hf_terms().j_bb);
-    m_writer.write("ka" + itstr, problem_matrix.hf_terms().ka_bb);
-    m_writer.write("ka" + itstr, problem_matrix.hf_terms().ka_bb);
-    m_writer.write("kb" + itstr, problem_matrix.hf_terms().kb_bb);
-    m_writer.write("fock" + itstr, problem_matrix);
+    m_writer.write("pa" + itstr, s.problem_matrix().hf_terms().pa_bb);
+    m_writer.write("pb" + itstr, s.problem_matrix().hf_terms().pb_bb);
+    m_writer.write("j" + itstr, s.problem_matrix().hf_terms().j_bb);
+    m_writer.write("ka" + itstr, s.problem_matrix().hf_terms().ka_bb);
+    m_writer.write("ka" + itstr, s.problem_matrix().hf_terms().ka_bb);
+    m_writer.write("kb" + itstr, s.problem_matrix().hf_terms().kb_bb);
+    m_writer.write("fock" + itstr, s.problem_matrix());
 
     std::streamsize prec = std::cout.precision();
     std::cout << "   Current HF energies:" << std::endl

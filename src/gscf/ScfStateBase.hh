@@ -12,8 +12,8 @@ namespace gscf {
  */
 template <typename ProblemMatrix, typename OverlapMatrix,
           typename DiagonalisedMatrix = ProblemMatrix>
-class ScfStateBase : public linalgwrap::SolverStateBase,
-                     public linalgwrap::IterativeSolverState {
+class ScfStateBase
+      : public linalgwrap::IterativeStateWrapper<linalgwrap::SolverStateBase> {
 
   static_assert(
         std::is_same<
@@ -53,70 +53,55 @@ public:
 
   /** The type of the eigenvectors */
   typedef typename matrix_type::vector_type vector_type;
+
+  /** The type of the eigensolution */
+  typedef linalgwrap::Eigensolution<scalar_type, vector_type> esoln_type;
   ///@}
 
   /** Get the overlap matrix of the SCF problem */
   const OverlapMatrix& overlap_matrix() const { return *m_overlap_matrix_ptr; }
 
   /** Constant access to the current problem matrix, i.e. the current
-   * approximation
-   *  to the self-consistent state we wish to obtain for the non-linear problem
-   *  in the end. */
-  const std::shared_ptr<const probmat_type> problem_matrix_ptr() const {
-    return m_problem_matrix_ptr;
-  }
+   *  approximation to the self-consistent state we wish to obtain for
+   *  the non-linear problem in the end. */
+  const probmat_type& problem_matrix() const { return *problem_matrix_ptr; }
 
-  /** Access to the current problem matrix, i.e. the current approximation
-   *  to the self-consistent state we wish to obtain for the non-linear problem
-   *  in the end. */
-  std::shared_ptr<probmat_type>& problem_matrix_ptr() {
-    return m_problem_matrix_ptr;
-  }
+  /** Access to the current problem matrix, i.e. the current
+   *  approximation to the self-consistent state we wish to obtain for
+   *  the non-linear problem in the end. */
+  probmat_type& problem_matrix() { return *problem_matrix_ptr; }
 
   /** \brief Constant access to the matrix which is diagonalised in order to
-   * obtain
-   * the new eigenpairs.
+   * obtain the new eigenpairs.
    *
    * \note This matrix may be identical to problem_matrix_ptr() for some
-   * algorithms
-   * (like PlainSCF), but may also me different (like in a DiisScf).
+   * algorithms (like PlainSCF), but may also me different (like in a DiisScf).
    */
-  const std::shared_ptr<const diagmat_type> diagonalised_matrix_ptr() const {
-    return m_diagonalised_matrix;
+  const diagmat_type& diagonalised_matrix() const {
+    return *diagonalised_matrix_ptr;
   }
 
-  /** \brief Access to the matrix which is diagonalised in order to obtain
-   * the new eigenpairs.
+  /** \brief Access to the matrix which is diagonalised in order to
+   * obtain the new eigenpairs.
    *
    * \note This matrix may be identical to problem_matrix_ptr() for some
-   * algorithms
-   * (like PlainSCF), but may also me different (like in a DiisScf).
+   * algorithms (like PlainSCF), but may also me different (like in a DiisScf).
    */
-  std::shared_ptr<diagmat_type>& diagonalised_matrix_ptr() {
-    return m_diagonalised_matrix;
-  }
+  diagmat_type& diagonalised_matrix() { return *diagonalised_matrix_ptr; }
 
-  /** Constant access to the current eigenvectors */
-  const std::shared_ptr<const linalgwrap::MultiVector<vector_type>>
-  eigenvectors_ptr() const {
-    return m_eigenvectors_ptr;
-  }
+  /** Constant access to the most recent eigensolution obtained */
+  const esoln_type& eigensolution() const { return m_eigensolution; }
 
-  /** Access to the current eigenvectors */
-  std::shared_ptr<linalgwrap::MultiVector<vector_type>>& eigenvectors_ptr() {
-    return m_eigenvectors_ptr;
-  }
+  /** Access to the most recent eigensolution obtained */
+  esoln_type& eigensolution() { return m_eigensolution; }
 
-  /** Constant access to the current eigenvalues */
-  const std::shared_ptr<const std::vector<scalar_type>> eigenvalues_ptr()
-        const {
-    return m_eigenvalues_ptr;
-  }
+  /** Number of iterations the most recent eigensolver invocation needed
+   *  to solve the problem. */
+  size_t n_eigenproblem_iter;
 
-  /** Access to the current eigenvalues */
-  std::shared_ptr<std::vector<scalar_type>>& eigenvalues_ptr() {
-    return m_eigenvalues_ptr;
-  }
+  /** Norm of the last error as computed by the SCF's calculate_error
+   *  function */
+  real_type last_error_norm;
 
   /** \brief Constructor
    *
@@ -126,39 +111,45 @@ public:
    * eigenvectors and the eigenvalues pointers are set to nullptr.
    * */
   ScfStateBase(probmat_type prob_mat, const OverlapMatrix& overlap_mat)
-        : m_overlap_matrix_ptr{krims::make_subscription(overlap_mat,
-                                                        "ScfState")},
-          m_problem_matrix_ptr{
+        : linalgwrap::IterativeStateWrapper<
+                linalgwrap::SolverStateBase>{linalgwrap::SolverStateBase()},
+          n_eigenproblem_iter(0),
+          last_error_norm{linalgwrap::Constants<real_type>::invalid},
+          problem_matrix_ptr{
                 std::make_shared<probmat_type>(std::move(prob_mat))},
-          m_diagonalised_matrix{nullptr},
-          m_eigenvectors_ptr{nullptr},
-          m_eigenvalues_ptr{nullptr} {
+          diagonalised_matrix_ptr{nullptr},
+          m_overlap_matrix_ptr{
+                krims::make_subscription(overlap_mat, "ScfState")},
+          m_eigensolution{} {
     // Check that we really get a hermitian matrix as we implicitly assume.
-    assert_dbg(m_problem_matrix_ptr->is_hermitian(),
+    assert_dbg(problem_matrix_ptr->is_hermitian(),
                linalgwrap::ExcMatrixNotHermitian());
     // Note: This assumption is build into the update_eigenpairs method
     //       of ScfBase.
   }
 
-private:
-  //! The overlap matrix of the SCF problem.
-  krims::SubscriptionPointer<const overlap_type> m_overlap_matrix_ptr;
-
+  /** \name Advanced access to matrix pointers
+   *
+   * Use only if you know what you are doing.
+   * */
+  ///@{
   /** The current problem matrix as obtained as the approximation
    *  to the self-consistent problem matrix in this step. **/
-  std::shared_ptr<probmat_type> m_problem_matrix_ptr;
+  std::shared_ptr<probmat_type> problem_matrix_ptr;
 
   /** The current matrix used to obtain the eigenvectors
    *  and eigenpairs. (Note that this may be identical to
    *  m_problem_matrix_ptr like in a plain SCF, but may also be
    *  different like in a DIIS-SCF */
-  std::shared_ptr<diagmat_type> m_diagonalised_matrix;
+  std::shared_ptr<diagmat_type> diagonalised_matrix_ptr;
+  ///@}
+private:
+  //! The overlap matrix of the SCF problem.
+  krims::SubscriptionPointer<const overlap_type> m_overlap_matrix_ptr;
 
-  //! The current set of eigenvectors of the operator
-  std::shared_ptr<linalgwrap::MultiVector<vector_type>> m_eigenvectors_ptr;
-
-  //! The current eigenvalues of the operator
-  std::shared_ptr<std::vector<scalar_type>> m_eigenvalues_ptr;
+  //! The most recent eigensolution obtained (only contains pointers,
+  //  so ok to store
+  esoln_type m_eigensolution;
 
   // Check that the eigenvalue and eigenvector types are as we expect.
   // We need to do this, since we want to keep the interface simple here.
@@ -167,14 +158,10 @@ private:
   // this is as of now always the vector_type of the stored matrix for
   // the eigenvectors and the scalar type for the eigenvalues.
   // This is just here to check that this is really what we get.
-  static_assert(std::is_same<vector_type,
-                             typename linalgwrap::EigensolutionTypeFor<
-                                   true, diagmat_type>::evector_type>::value,
-                "Problem when determining the eigenvector type");
-  static_assert(std::is_same<scalar_type,
-                             typename linalgwrap::EigensolutionTypeFor<
-                                   true, diagmat_type>::evalue_type>::value,
-                "Problem when determining the eigenvalue type");
+  static_assert(
+        std::is_same<esoln_type, typename linalgwrap::EigensolutionTypeFor<
+                                       true, diagmat_type>>::value,
+        "Problem when determining the eigensolution type");
 };
 
 //@{

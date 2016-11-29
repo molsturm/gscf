@@ -23,29 +23,17 @@ public:
   typedef FockType fock_type;
   typedef typename FockType::stored_matrix_type matrix_type;
   typedef gscf::PlainScf<PlainScfState<FockType, matrix_type>> base_type;
-  typedef typename matrix_type::vector_type vector_type;
-  typedef typename matrix_type::scalar_type scalar_type;
   typedef typename base_type::state_type state_type;
-
-  //! The maximal allowed error for convergence
-  scalar_type max_error = 5e-7;
-
-  //! We converge if the frobenius norm of the Pulay error is
-  // below above value
-  bool is_converged(const state_type& s) const override {
-    if (s.problem_matrix_ptr() == nullptr || s.eigenvectors_ptr() == nullptr)
-      return false;
-
-    const fock_type& fock_bb = *s.problem_matrix_ptr();
-    const auto& coefficients_bf = *s.eigenvectors_ptr();
-    const matrix_type& overlap_bb = s.overlap_matrix();
-
-    matrix_type error = pulay_error(fock_bb, coefficients_bf, overlap_bb);
-    return norm_frobenius(error) < max_error;
-  }
 
   PlainScf() : base_type() {}
   PlainScf(const ParameterMap& map) : base_type(map) {}
+
+  matrix_type calculate_error(const state_type& s) const override {
+    const auto& fock_bb = s.problem_matrix();
+    const auto& coefficients_bf = s.eigensolution().evectors();
+    const auto& overlap_bb = s.overlap_matrix();
+    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+  }
 };
 
 template <typename FockType>
@@ -60,9 +48,9 @@ public:
 
   //! Define how we compute the error: Pulay error
   matrix_type calculate_error(const state_type& s) const override {
-    const fock_type& fock_bb = *s.problem_matrix_ptr();
-    const auto& coefficients_bf = *s.eigenvectors_ptr();
-    const matrix_type& overlap_bb = s.overlap_matrix();
+    const auto& fock_bb = s.problem_matrix();
+    const auto& coefficients_bf = s.eigensolution().evectors();
+    const auto& overlap_bb = s.overlap_matrix();
     return pulay_error(fock_bb, coefficients_bf, overlap_bb);
   }
 
@@ -153,12 +141,12 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     CHECK(res.n_iter() < 15);
 
     // Check the eigenvalues
-    const auto& evalues = *res.eigenvalues_ptr();
+    const auto& evalues = res.eigensolution().evalues();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
       CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
     }
 
-    const auto& evectors = *res.eigenvectors_ptr();
+    const auto& evectors = res.eigensolution().evectors();
     // TODO For comparing all of them one needs to take rotations
     //      inside degenerate subspaces into account
     for (size_t i = 0; i < n_alpha; ++i) {
@@ -167,7 +155,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     }
 
     // Check the energies:
-    auto hf_energies = res.problem_matrix_ptr()->energies();
+    auto hf_energies = res.problem_matrix().energies();
     CHECK(hf_energies.energy_1e_terms ==
           numcomp(exp_energy_1e_terms).tolerance(basetol));
     CHECK(hf_energies.energy_coulomb ==
@@ -186,12 +174,12 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     CHECK(res.n_iter() < 8);
 
     // Check the eigenvalues
-    const auto& evalues = *res.eigenvalues_ptr();
+    const auto& evalues = res.eigensolution().evalues();
     for (size_t i = 0; i < eval_expected.size(); ++i) {
       CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
     }
 
-    const auto& evectors = *res.eigenvectors_ptr();
+    const auto& evectors = res.eigensolution().evectors();
     // TODO For comparing all of them one needs to take rotations
     //      inside degenerate subspaces into account
     for (size_t i = 0; i < n_alpha; ++i) {
@@ -201,7 +189,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     }
 
     // Check the energies:
-    auto hf_energies = res.problem_matrix_ptr()->energies();
+    auto hf_energies = res.problem_matrix().energies();
     CHECK(hf_energies.energy_1e_terms ==
           numcomp(exp_energy_1e_terms).tolerance(basetol));
     CHECK(hf_energies.energy_coulomb ==

@@ -23,6 +23,8 @@ struct PlainScfState
 
   PlainScfState(probmat_type probmat, const overlap_type& overlap_mat)
         : base_type{std::move(probmat), overlap_mat} {}
+
+  PlainScfState(const base_type& old_state) : base_type(old_state) {}
 };
 
 /** \name  Basic and plain SCF algorithm
@@ -39,6 +41,10 @@ struct PlainScfState
  *          documentation of your chosen eigensolver for possible values.
  *          Note that this map can be used to *select* an eigensolver as
  *          well.
+ *   - max_error_norm:  If the Frobenius norm of the most recent error
+ *                      vector/matrix computed by ``calculate_error``
+ *                      is below this value, we consider the iteration
+ *                      converged (default: 5e-7)
  *
  * \tparam ScfState  The precise scf state type which is available
  *                   to is_converged and all handler functions.
@@ -81,6 +87,13 @@ public:
   void update_control_params(const krims::ParameterMap& map) {
     base_type::update_control_params(map);
   }
+
+  /** Get the current settings of all internal control parameters and
+   *  update the ParameterMap accordingly.
+   */
+  void get_control_params(krims::ParameterMap& map) const {
+    base_type::get_control_params(map);
+  }
   ///@}
 
   /** Implementation of the SolverBase method */
@@ -93,11 +106,14 @@ public:
 
 template <typename ScfState>
 void PlainScf<ScfState>::solve_state(state_type& state) const {
+  assert_dbg(!state.is_failed(),
+             krims::ExcInvalidState("Cannot solve a failed state"));
+
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);
 
     // Diagonalise the problem matrix
-    state.diagonalised_matrix_ptr() = state.problem_matrix_ptr();
+    state.diagonalised_matrix_ptr = state.problem_matrix_ptr;
     base_type::update_eigenpairs(state);
 
     // We free the extra pointer to the problem matrix object here
@@ -106,8 +122,11 @@ void PlainScf<ScfState>::solve_state(state_type& state) const {
     // does not need to do a copy of the object referred to by the
     // problem_matrix_ptr, but it can just update the current one
     // in-place.
-    state.diagonalised_matrix_ptr().reset();
+    state.diagonalised_matrix_ptr.reset();
     base_type::update_problem_matrix(state);
+
+    // Calculate the new error.
+    base_type::update_last_error_norm(state);
 
     base_type::end_iteration_step(state);
   }

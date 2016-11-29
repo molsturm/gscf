@@ -1,6 +1,8 @@
 #pragma once
 #include "ScfBaseKeys.hh"
 #include "ScfStateBase.hh"
+#include <linalgwrap/Base/Solvers.hh>
+#include <linalgwrap/EigensystemSolver.hh>
 #include <linalgwrap/eigensystem.hh>
 
 namespace gscf {
@@ -13,16 +15,21 @@ DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
 /** Class to provide building block functions and a common interface
  * for SCF procedures
  *
+ * The error in the base implementation is dummy, i.e. it is tuned such
+ * that the iteration will run forever (i.e. until max_iterations is reached).
+ *
+ * To change this behaviour override ``is_converged`` and/or ``calculate_error``
+ *
  * \see gscf::ScfStateBase
  * */
 template <typename State>
 class ScfBase
-      : public linalgwrap::IterativeSolver<linalgwrap::SolverBase<State>> {
+      : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> {
   static_assert(IsScfState<State>::value,
                 "State needs to be a type derived from ScfStateBase");
 
 public:
-  typedef linalgwrap::IterativeSolver<linalgwrap::SolverBase<State>> base_type;
+  typedef linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> base_type;
   typedef typename base_type::state_type state_type;
 
   /** \name Types forwarded from ScfState */
@@ -39,6 +46,9 @@ public:
   /** The type of the scalars as determined by the traits */
   typedef typename state_type::scalar_type scalar_type;
 
+  /** The type of the scalars as determined by the traits */
+  typedef typename state_type::real_type real_type;
+
   /** The type of the size indices as determined by the traits */
   typedef typename state_type::size_type size_type;
 
@@ -54,6 +64,10 @@ public:
   /** The parameters for the inner eigensolver */
   krims::ParameterMap eigensolver_params;
 
+  /** Maximum value the Frobenius norm of the
+   *  most recent error vector/matrix may have. */
+  real_type max_error_norm = 5e-7;
+
   /** Bulk-update control parameters from a parameter map.
    *
    * For the list of available keys, see ScfBaseKeys.hh
@@ -61,8 +75,29 @@ public:
   void update_control_params(const krims::ParameterMap& map) {
     base_type::update_control_params(map);
     n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
-
     eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
+    user_eigensolver_tolerance =
+          map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
+  }
+
+  /** Has the user provided tolerance settings for the eigensolver? */
+  bool user_eigensolver_tolerance = false;
+
+  /** Get the current settings of all internal control parameters and
+   *  update the ParameterMap accordingly.
+   */
+  void get_control_params(krims::ParameterMap& map) const {
+    base_type::get_control_params(map);
+    map.update(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
+    map.update(ScfBaseKeys::max_error_norm, max_error_norm);
+    map.update(ScfBaseKeys::eigensolver_params, eigensolver_params);
+  }
+
+  /** Is the iteration error already smaller than the
+   * required norm for convergence ? */
+  bool is_converged(const state_type& s) const override {
+    // Norm of the current error is below threshold
+    return s.last_error_norm < max_error_norm;
   }
   ///@}
 
@@ -125,6 +160,20 @@ protected:
    * certain events happen.
    */
   ///@{
+  /** Calculate the error matrix of a provided scf state.
+   *
+   *  This implementation calculates the residual error, i.e. the difference
+   *  vectors between the current and the most recent eigenvectors.
+   **/
+  virtual matrix_type calculate_error(const state_type&) const {
+    return matrix_type{{linalgwrap::Constants<scalar_type>::invalid}};
+  }
+
+  /** Update the last_error_norm using the calculate_error function. */
+  void update_last_error_norm(state_type& s) const {
+    s.last_error_norm = norm_frobenius(calculate_error(s));
+  }
+
   /** \brief Solve the eigensystem currently represented by the
    *  diagonalised_matrix_ptr and the overlap_matrix of the SCF state
    *  and place results back inside the state.
@@ -156,33 +205,54 @@ template <typename ScfState>
 void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
   using namespace linalgwrap;
 
-  assert_dbg(s.diagonalised_matrix_ptr() != nullptr,
+  assert_dbg(s.diagonalised_matrix_ptr != nullptr,
              krims::ExcInvalidState("update_eigenpairs needs a valid "
                                     "matrix pointer inside "
                                     "s.diagonalised_matrix_ptr"));
 
-  const diagmat_type& diagmat = *s.diagonalised_matrix_ptr();
-  try {
-    // Solve the problem:
-    auto sol = eigensystem_hermitian(diagmat, s.overlap_matrix(), n_eigenpairs,
-                                     eigensolver_params);
+  // TODO make use of SCF tolerance somehow
 
-    // Update state:
-    s.eigenvectors_ptr() = sol.evectors_ptr;
-    s.eigenvalues_ptr() = sol.evalues_ptr;
+  // Matrix and eigenproblem setup:
+  typedef Eigenproblem</* herm= */ true, diagmat_type, overlap_type> eprob_type;
+  eprob_type problem(s.diagonalised_matrix(), s.overlap_matrix(), n_eigenpairs);
+
+  // Setup solver state with the eigensolution from the previous run.
+  EigensystemSolverState<eprob_type> state(std::move(problem));
+  state.obtain_guess_from(s.eigensolution());
+
+  /*
+  if (false && !user_eigensolver_tolerance) {
+    // TODO This is absolutely empirical right now.
+    //      Check with some literature
+    const real_type tolerance = std::max(
+          s.last_error_norm / 100., std::numeric_limits<real_type>::epsilon());
+    eigensolver_params.update(EigensystemSolverKeys::tolerance, tolerance);
+  }
+  */
+
+  try {
+    // Solve state with parameters:
+    EigensystemSolver<eprob_type>{eigensolver_params}.solve_state(state);
+
+    // Update our state:
+    s.eigensolution() = state.eigensolution();
+    s.n_eigenproblem_iter = state.n_iter();
   } catch (const linalgwrap::SolverException& e) {
 #ifdef DEBUG
     try {
-      if (diagmat.n_cols() < 1000) {
+      if (problem.dim() < 1000) {
         std::cerr << "The inner eigensolver failed";
-        // Overwrite user method selection:
+
+        // Overwrite some user parameters:
         krims::ParameterMap copy(eigensolver_params);
-        copy.update("method", "auto");
+        copy.update(EigensystemSolverKeys::method, "auto");
+        copy.update(EigensystemSolverKeys::tolerance,
+                    Constants<real_type>::default_tolerance);
 
         // Solve for full spectrum:
         const auto all = linalgwrap::Constants<size_t>::all;
         auto solresq =
-              eigensystem_hermitian(diagmat, s.overlap_matrix(), all, copy);
+              eigensystem_hermitian(problem.A(), problem.B(), all, copy);
 
         std::cerr << "  ...  full eigenspectrum of problem:" << std::endl
                   << std::endl;
@@ -206,7 +276,7 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
 
 template <typename ScfState>
 void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
-  if (!s.problem_matrix_ptr().unique()) {
+  if (!s.problem_matrix_ptr.unique()) {
     // s is not the only thing referencing the object behind the
     // problem_matrix_ptr shared pointer, so we need to copy the object
     // first. This assures that objects that depend on the SCF state (i.e.
@@ -221,17 +291,17 @@ void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
 
     // Copy the old problem matrix:
     auto new_problem_matrix_ptr =
-          std::make_shared<probmat_type>(*s.problem_matrix_ptr());
+          std::make_shared<probmat_type>(*s.problem_matrix_ptr);
 
     // Replace the current one in the state:
-    s.problem_matrix_ptr() = new_problem_matrix_ptr;
+    s.problem_matrix_ptr = std::move(new_problem_matrix_ptr);
   }
 
   // Obtain the expected update key from the problem matrix
   // and update the problem matrix:
-  const std::string key = s.problem_matrix_ptr()->scf_update_key();
-  const auto const_evec_ptr = s.eigenvectors_ptr();
-  s.problem_matrix_ptr()->update({{key, const_evec_ptr}});
+  const std::string key = s.problem_matrix().scf_update_key();
+  const auto const_evec_ptr = s.eigensolution().evectors_ptr;
+  s.problem_matrix().update({{key, const_evec_ptr}});
 
   on_update_problem_matrix(s);
 }

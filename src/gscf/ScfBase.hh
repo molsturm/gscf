@@ -75,6 +75,7 @@ public:
   void update_control_params(const krims::ParameterMap& map) {
     base_type::update_control_params(map);
     n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
+    max_error_norm = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
     eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
     user_eigensolver_tolerance =
           map.exists(linalgwrap::EigensystemSolverKeys::tolerance);

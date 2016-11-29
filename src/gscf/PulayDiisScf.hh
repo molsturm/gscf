@@ -16,7 +16,6 @@ DefSolverException1(ExcDiisStepFailed, std::string, details,
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
 template <typename ProblemMatrix, typename OverlapMatrix>
-// TODO invent type-traits to determine "linear combination type"
 struct PulayDiisScfState
       : public ScfStateBase<ProblemMatrix, OverlapMatrix,
                             linalgwrap::LazyMatrixSum<
@@ -32,17 +31,7 @@ struct PulayDiisScfState
   typedef typename base_type::size_type size_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename base_type::vector_type vector_type;
-
-  /** The last n_prev_steps eigenvector pointers,
-   * front() is the oldest, back() the most recent*/
-  krims::CircularBuffer<
-        std::shared_ptr<const linalgwrap::MultiVector<vector_type>>>
-        prev_eigenvectors_ptrs;
-
-  /** The last n_prev_steps eigenvalue pointers,
-   * front() is the oldest, back() the most recent*/
-  krims::CircularBuffer<std::shared_ptr<const std::vector<scalar_type>>>
-        prev_eigenvalues_ptrs;
+  typedef typename base_type::esoln_type esoln_type;
 
   /** The last n_prev_steps problem matrix pointers,
    * front() is the oldest, back() the most recent */
@@ -84,8 +73,8 @@ struct PulayDiisScfState
   /** Construct an empty state, where all Circular buffers hold no elements */
   PulayDiisScfState(probmat_type probmat, const overlap_type& overlap_mat);
 
-  /** Initialise from base state */
-  PulayDiisScfState(const base_type& old_state);
+  /** The eigensolution before the one stored in eigensolution() */
+  esoln_type prev_eigensolution;
 
   /** Resize all circular buffers to hold up to the given number
    * of previous SCF steps */
@@ -275,39 +264,14 @@ template <typename ProblemMatrix, typename OverlapMatrix>
 PulayDiisScfState<ProblemMatrix, OverlapMatrix>::PulayDiisScfState(
       probmat_type probmat, const overlap_type& overlap_mat)
       : base_type{std::move(probmat), overlap_mat},
-        prev_eigenvectors_ptrs{0},
-        prev_eigenvalues_ptrs{0},
         prev_problem_matrix_ptrs{0},
         errors{0},
         error_overlaps{0},
         diis_coefficients(0) {}
 
 template <typename ProblemMatrix, typename OverlapMatrix>
-PulayDiisScfState<ProblemMatrix, OverlapMatrix>::PulayDiisScfState(
-      const base_type& old_state)
-      : base_type(old_state),
-        prev_eigenvectors_ptrs{1},
-        prev_eigenvalues_ptrs{1},
-        prev_problem_matrix_ptrs{1},
-        errors{1},
-        error_overlaps{1},
-        diis_coefficients(1) {
-  // TODO This has never been tested.
-  assert_sufficiently_tested(false);
-
-  prev_eigenvectors_ptrs.push_back(old_state.eigenvectors_ptr());
-  prev_eigenvalues_ptrs.push_back(old_state.eigenvalues_ptr());
-  prev_problem_matrix_ptrs.push_back(old_state.problem_matrix_ptr());
-
-  // Errors, error_overlaps and diis_coefficients we cannot do here.
-  // This will be done at the beginning of the solve process below.
-}
-
-template <typename ProblemMatrix, typename OverlapMatrix>
 void PulayDiisScfState<ProblemMatrix, OverlapMatrix>::resize_buffers(
       const size_type n_prev_steps) {
-  prev_eigenvectors_ptrs.max_size(n_prev_steps);
-  prev_eigenvalues_ptrs.max_size(n_prev_steps);
   prev_problem_matrix_ptrs.max_size(n_prev_steps);
   errors.max_size(n_prev_steps);
   error_overlaps.max_size(n_prev_steps);
@@ -326,25 +290,6 @@ void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
   // the appropriate number of recent SCF steps
   state.resize_buffers(n_prev_steps);
 
-  /** TODO
-  if (state.start_from_other_scf == true) {
-    state.start_from_other_scf = false;
-
-    assert_dbg(state.errors.size() == 0, krims::ExcInternalError());
-    assert_dbg(state.error_overlaps.size() == 0, krims::ExcInternalError());
-    assert_dbg(state.prev_problem_matrix_ptrs.size() == 1,
-               krims::ExcInternalError());
-    assert_dbg(state.prev_eigenvalues_ptrs.size() == 1,
-               krims::ExcInternalError());
-    assert_dbg(state.prev_eigenvectors_ptrs.size() == 1,
-               krims::ExcInternalError());
-
-    // Compute errors and error overlaps for other scf:
-    state.errors.push_back(calculate_error(state));
-    append_new_overlaps(state);
-  }
-  */
-
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);
 
@@ -352,10 +297,9 @@ void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
     update_diis_coefficients(state);
     update_diis_diagmat(state);
 
-    // Solve the eigensystem of the DIIS guess and push back results
+    // Solve the eigensystem of the DIIS guess
+    state.prev_eigensolution = state.eigensolution();
     base_type::update_eigenpairs(state);
-    state.prev_eigenvectors_ptrs.push_back(state.eigensolution().evectors_ptr);
-    state.prev_eigenvalues_ptrs.push_back(state.eigensolution().evalues_ptr);
 
     // The DIIS guess (stored in the diagonalised_matrix_ptr)
     // may contain copies of all operators in history.
@@ -484,7 +428,7 @@ template <typename ScfState>
 typename PulayDiisScf<ScfState>::matrix_type
 PulayDiisScf<ScfState>::calculate_error(const state_type& s) const {
   typedef linalgwrap::MultiVector<vector_type> mvec_type;
-  const mvec_type& prev_evec = *s.prev_eigenvectors_ptrs.back();
+  const mvec_type& prev_evec = s.prev_eigensolution.evectors();
   const mvec_type& cur_evec = s.eigensolution().evectors();
 
   // TODO until something better exists in linalgwrap

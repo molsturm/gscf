@@ -23,8 +23,6 @@ struct PlainScfState
 
   PlainScfState(probmat_type probmat, const overlap_type& overlap_mat)
         : base_type{std::move(probmat), overlap_mat} {}
-
-  PlainScfState(const base_type& old_state) : base_type(old_state) {}
 };
 
 /** \name  Basic and plain SCF algorithm

@@ -109,13 +109,13 @@ public:
    *  and overlap matrix and return the final state.
    *
    *  If the solver does not manage to achieve convergence a
-   *  SolverException is thnown an the state's fail bit will be set
+   *  SolverException is thrown as the state's fail bit will be set
    *  accompanied with an appropriate fail message.
    * as well
    **/
   virtual state_type solve(probmat_type probmat_bb,
-                           const overlap_type& overlapmat_bb) const {
-    state_type state{std::move(probmat_bb), overlapmat_bb};
+                           const overlap_type& overlap_bb) const {
+    state_type state{std::move(probmat_bb), overlap_bb};
     this->solve_state(state);
     return state;
   }
@@ -195,6 +195,23 @@ protected:
    *  unused storage automatically.
    */
   void update_problem_matrix(state_type& s) const;
+
+  /** \brief Compute a sensible tolerance value to use for
+   * inner (eigen)solvers in this iteration */
+  real_type inner_solver_tolerance(state_type& s) const {
+    const real_type fac = 0.01;
+
+    // TODO really do some playing around here!
+    return std::numeric_limits<real_type>::epsilon();
+
+    // For the first iteration there is no last error
+    real_type tolerance =
+          (s.n_iter() == 1) ? fac * max_error_norm : fac * s.last_error_norm;
+    assert_finite(tolerance);
+
+    // No undershooting of numeric epsilon
+    return std::max(tolerance, std::numeric_limits<real_type>::epsilon());
+  }
   ///@}
 };
 
@@ -218,26 +235,25 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
   eprob_type problem(s.diagonalised_matrix(), s.overlap_matrix(), n_eigenpairs);
 
   // Setup solver state with the eigensolution from the previous run.
-  EigensystemSolverState<eprob_type> state(std::move(problem));
+  EigensystemSolverState<eprob_type> state(problem);
   state.obtain_guess_from(s.eigensolution());
 
-  /*
-  if (false && !user_eigensolver_tolerance) {
-    // TODO This is absolutely empirical right now.
-    //      Check with some literature
-    const real_type tolerance = std::max(
-          s.last_error_norm / 100., std::numeric_limits<real_type>::epsilon());
-    eigensolver_params.update(EigensystemSolverKeys::tolerance, tolerance);
+  // Setup the solver. If the user did not supply a tolerance,
+  // then we do.
+  EigensystemSolver<eprob_type> solver{eigensolver_params};
+  if (!user_eigensolver_tolerance) {
+    solver.update_control_params(
+          {{EigensystemSolverKeys::tolerance, inner_solver_tolerance(s)}});
   }
-  */
 
   try {
-    // Solve state with parameters:
-    EigensystemSolver<eprob_type>{eigensolver_params}.solve_state(state);
+    solver.solve_state(state);
 
-    // Update our state:
+    // TODO This is a lot of redundant copying code.
+    //      Can one make that better?
     s.eigensolution() = state.eigensolution();
-    s.n_eigenproblem_iter() = state.n_iter();
+    s.eigenproblem_stats().n_iter() = state.n_iter();
+    s.eigenproblem_stats().n_mtx_applies() = state.n_mtx_applies();
   } catch (const linalgwrap::SolverException& e) {
 #ifdef DEBUG
     try {

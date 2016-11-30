@@ -28,6 +28,7 @@ struct PulayDiisScfState
   typedef typename base_type::overlap_type overlap_type;
   typedef typename base_type::diagmat_type diagmat_type;
   typedef typename base_type::scalar_type scalar_type;
+  typedef typename base_type::real_type real_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename base_type::vector_type vector_type;
@@ -301,6 +302,13 @@ void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
     state.prev_eigensolution = state.eigensolution();
     base_type::update_eigenpairs(state);
 
+    // Update the matrix applies, noting that there are
+    // various terms in the diagmat matrix we actually
+    // diagonalise
+    const size_t n_terms = std::max(1ul, state.diis_coefficients.size());
+    state.n_mtx_applies() +=
+          n_terms * state.eigenproblem_stats().n_mtx_applies();
+
     // The DIIS guess (stored in the diagonalised_matrix_ptr)
     // may contain copies of all operators in history.
     // To release the memory of what we don't need any more,
@@ -372,16 +380,12 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
   rhs(n_errors) = -1;
 
   try {
-    // Do the linear solve
+    // Solver tolerance: Don't solve more accurate that we have to.
+    const krims::ParameterMap param{
+          {"tolerance", base_type::inner_solver_tolerance(s)}};
 
-    // TODO: Here one could·specify a varying tolerance depending on
-    // how accurate we want to have the final result and depending on
-    // how large our SCF error currently is. This is just a shot
-    // and currently does nothing.
-    krims::ParameterMap params{{"tolerance", base_type::max_error_norm / 100.}};
-
-    vector_type x(n_errors + 1, false);  // no initialisation
-    linalgwrap::solve_hermitian(B, x, rhs, params);
+    vector_type x(n_errors + 1, /* zero= */ false);
+    linalgwrap::solve_hermitian(B, x, rhs, param);
 
     // Keep the first n_errors entries of the vector.
     // TODO more clever way to do this?

@@ -56,6 +56,27 @@ public:
 
   /** The type of the eigensolution */
   typedef linalgwrap::Eigensolution<scalar_type, vector_type> esoln_type;
+
+  /** The type to access some eigenproblem statistics from the most recent
+   *  eigensolver invocation. */
+  struct eprob_stats_t {
+    /** Number of iterations the most recent eigensolver invocation needed
+     *  to solve the problem. */
+    //@{
+    size_t n_iter() const { return m_n_iter; }
+    size_t& n_iter() { return m_n_iter; }
+    //@}
+
+    /** Number of matrix applies the most recent eigensolver invocation
+     *  needed to solve the problem */
+    //@{
+    size_t n_mtx_applies() const { return m_n_mtx_applies; }
+    size_t& n_mtx_applies() { return m_n_mtx_applies; }
+    //@}
+  private:
+    size_t m_n_mtx_applies = 0;
+    size_t m_n_iter = 0;
+  };
   ///@}
 
   /** Get the overlap matrix of the SCF problem */
@@ -95,10 +116,14 @@ public:
   /** Access to the most recent eigensolution obtained */
   esoln_type& eigensolution() { return m_eigensolution; }
 
-  /** Number of iterations the most recent eigensolver invocation needed
-   *  to solve the problem. */
-  size_t n_eigenproblem_iter() const { return m_n_eigenproblem_iter; }
-  size_t& n_eigenproblem_iter() { return m_n_eigenproblem_iter; }
+  /** The number of problem matrix applies needed so far to
+   *  solve the scf problem
+   */
+  size_t n_mtx_applies() const { return m_n_mtx_applies; }
+  size_t& n_mtx_applies() { return m_n_mtx_applies; }
+
+  const eprob_stats_t& eigenproblem_stats() const { return m_eprob_stats; }
+  eprob_stats_t& eigenproblem_stats() { return m_eprob_stats; }
 
   /** Norm of the last error as computed by the SCF's calculate_error
    *  function */
@@ -118,7 +143,7 @@ public:
           problem_matrix_ptr{
                 std::make_shared<probmat_type>(std::move(prob_mat))},
           diagonalised_matrix_ptr{nullptr},
-          m_n_eigenproblem_iter(0),
+          m_n_mtx_applies(0),
           m_overlap_matrix_ptr{
                 krims::make_subscription(overlap_mat, "ScfState")},
           m_eigensolution{} {
@@ -145,8 +170,11 @@ public:
   std::shared_ptr<diagmat_type> diagonalised_matrix_ptr;
   ///@}
 private:
-  /** Number of iterations the most recent eigensolver took */
-  size_t m_n_eigenproblem_iter;
+  /** Statistics about the most recent inner eigensolver call */
+  eprob_stats_t m_eprob_stats;
+
+  /** The number of operator applies in this solver */
+  size_t m_n_mtx_applies;
 
   //! The overlap matrix of the SCF problem.
   krims::SubscriptionPointer<const overlap_type> m_overlap_matrix_ptr;

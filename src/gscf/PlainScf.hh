@@ -113,6 +113,7 @@ void PlainScf<ScfState>::solve_state(state_type& state) const {
     // Diagonalise the problem matrix
     state.diagonalised_matrix_ptr = state.problem_matrix_ptr;
     base_type::update_eigenpairs(state);
+    state.n_mtx_applies() += state.eigenproblem_stats().n_mtx_applies();
 
     // We free the extra pointer to the problem matrix object here
     // such that the problem_matrix_ptr is the only guy pointing

@@ -3,6 +3,31 @@
 
 namespace gscf {
 
+// TODO should this live in linalgwrap?
+/** The type to access some eigenproblem statistics from the most recent
+ *  inner eigensolver invocation. */
+struct EigenproblemStatistics {
+  /** Number of iterations the most recent eigensolver invocation needed
+   *  to solve the problem. */
+  //@{
+  size_t n_iter() const { return m_n_iter; }
+  //@}
+
+  /** Number of matrix applies the most recent eigensolver invocation
+   *  needed to solve the problem */
+  //@{
+  size_t n_mtx_applies() const { return m_n_mtx_applies; }
+  //@}
+
+  EigenproblemStatistics() {}
+  EigenproblemStatistics(size_t n_iter, size_t n_mtx_applies)
+        : m_n_iter(n_iter), m_n_mtx_applies(n_mtx_applies) {}
+
+ private:
+  size_t m_n_iter = 0;
+  size_t m_n_mtx_applies = 0;
+};
+
 /** \brief Scf state base class
  *
  * Provides the most basic state of each SCF, the current problem matrix,
@@ -55,30 +80,6 @@ class ScfStateBase
 
   /** The type of the eigensolution */
   typedef linalgwrap::Eigensolution<scalar_type, vector_type> esoln_type;
-
-  /** The type to access some eigenproblem statistics from the most recent
-   *  eigensolver invocation. */
-  struct eprob_stats_t {
-    /** Number of iterations the most recent eigensolver invocation needed
-     *  to solve the problem. */
-    //@{
-    size_t n_iter() const { return m_n_iter; }
-    //@}
-
-    /** Number of matrix applies the most recent eigensolver invocation
-     *  needed to solve the problem */
-    //@{
-    size_t n_mtx_applies() const { return m_n_mtx_applies; }
-    //@}
-
-    eprob_stats_t() {}
-    eprob_stats_t(size_t n_iter, size_t n_mtx_applies)
-          : m_n_iter(n_iter), m_n_mtx_applies(n_mtx_applies) {}
-
-   private:
-    size_t m_n_iter = 0;
-    size_t m_n_mtx_applies = 0;
-  };
   ///@}
 
   /** Get the overlap matrix of the SCF problem */
@@ -122,11 +123,12 @@ class ScfStateBase
    *  of the most recent eigenproblem which was solved to obtain the
    *  eigensolution
    */
-  const eprob_stats_t& eigenproblem_stats() const { return m_eprob_stats; }
+  const EigenproblemStatistics& eigenproblem_stats() const { return m_eprob_stats; }
 
   /** Update the eigensolution stored in the state along with its
    * statistics */
-  void push_new_eigensolution(esoln_type new_eigensolution, eprob_stats_t new_stats);
+  void push_new_eigensolution(esoln_type new_eigensolution,
+                              EigenproblemStatistics new_stats);
 
   /** The number of problem matrix applies needed so far to
    *  solve the scf problem
@@ -165,9 +167,9 @@ class ScfStateBase
   ///@{
   /** Setup the guess of this state. from another state. */
   template <typename DiagMat>
-  void obtain_guess_from(const ScfStateBase<diagmat_type, overlap_type, DiagMat>& other) {
-    m_eigensolution = other.m_eigensolution;
-    m_prev_eigensolution = other.m_prev_eigensolution;
+  void obtain_guess_from(const ScfStateBase<probmat_type, overlap_type, DiagMat>& other) {
+    m_eigensolution = other.eigensolution();
+    m_prev_eigensolution = other.previous_eigensolution();
   }
 
   /** Setup the guess of this state. from another eigensolution.
@@ -193,7 +195,7 @@ class ScfStateBase
   ///@}
  private:
   /** Statistics about the most recent inner eigensolver call */
-  eprob_stats_t m_eprob_stats;
+  EigenproblemStatistics m_eprob_stats;
 
   /** The number of operator applies in this solver */
   size_t m_n_mtx_applies;
@@ -242,7 +244,8 @@ struct IsScfState<T, krims::VoidType<typename T::probmat_type, typename T::overl
 
 template <typename ProblemMatrix, typename OverlapMatrix, typename DiagonalisedMatrix>
 void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::
-      push_new_eigensolution(esoln_type new_eigensolution, eprob_stats_t new_stats) {
+      push_new_eigensolution(esoln_type new_eigensolution,
+                             EigenproblemStatistics new_stats) {
   // If memory is really an issue one should have the option to bin the previous
   // eigensolution instead.
   m_prev_eigensolution = m_eigensolution;

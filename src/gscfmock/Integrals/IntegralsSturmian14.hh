@@ -9,7 +9,7 @@ namespace gscfmock {
  * a maximum principle quantum number of 3.
  */
 class IntegralsSturmian14 : public IntegralDataBase {
-public:
+ public:
   typedef IntegralDataBase base_type;
   typedef typename base_type::scalar_type scalar_type;
   typedef typename base_type::matrix_type matrix_type;
@@ -42,7 +42,7 @@ public:
    *  of shell pairs.*/
   const matrix_type& i_bbbb() const override { return m_i_bbbb; }
 
-private:
+ private:
   static constexpr size_type m_nbas = 14;
   const scalar_type m_Z;       //< number of nuclei
   const matrix_type m_t_bb;    //< Actual t_bb matrix to be returned.

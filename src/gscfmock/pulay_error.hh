@@ -4,10 +4,10 @@
 namespace gscfmock {
 
 template <typename Fock>
-auto pulay_error(const Fock& fock_bb,
-                 const linalgwrap::MultiVector<
-                       const typename Fock::vector_type>& coefficients_bf,
-                 const typename Fock::stored_matrix_type& overlap_bb) ->
+auto pulay_error(
+      const Fock& fock_bb,
+      const linalgwrap::MultiVector<const typename Fock::vector_type>& coefficients_bf,
+      const typename Fock::stored_matrix_type& overlap_bb) ->
       typename Fock::stored_matrix_type {
   typedef typename Fock::size_type size_type;
 

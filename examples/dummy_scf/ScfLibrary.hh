@@ -13,12 +13,10 @@ using namespace gscfmock;
 
 template <typename FockType>
 class PlainScfHartreeFock
-      : public PlainScf<
-              PlainScfState<FockType, typename FockType::stored_matrix_type>> {
-public:
+      : public PlainScf<PlainScfState<FockType, typename FockType::stored_matrix_type>> {
+ public:
   typedef FockType fock_type;
-  typedef PlainScf<
-        PlainScfState<FockType, typename FockType::stored_matrix_type>>
+  typedef PlainScf<PlainScfState<FockType, typename FockType::stored_matrix_type>>
         base_type;
   typedef typename base_type::matrix_type matrix_type;
   typedef typename matrix_type::vector_type vector_type;
@@ -32,7 +30,7 @@ public:
   PlainScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
-protected:
+ protected:
   matrix_type calculate_error(const state_type& s) const override {
     const auto& fock_bb = s.problem_matrix();
     const auto& coefficients_bf = s.eigensolution().evectors();
@@ -41,8 +39,7 @@ protected:
   }
 
   void before_iteration_step(state_type& s) const override {
-    std::cout << std::endl
-              << "Starting SCF iteration " << s.n_iter() << std::endl;
+    std::cout << std::endl << "Starting SCF iteration " << s.n_iter() << std::endl;
   }
 
   void on_update_eigenpairs(state_type& s) const override {
@@ -72,9 +69,8 @@ protected:
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
-    assert_dbg(
-          s.problem_matrix().are_hf_terms_stored(),
-          krims::ExcInvalidState("problem matrix does not store HF terms."));
+    assert_dbg(s.problem_matrix().are_hf_terms_stored(),
+               krims::ExcInvalidState("problem matrix does not store HF terms."));
     m_writer.write("pa" + itstr, s.problem_matrix().hf_terms().pa_bb);
     m_writer.write("pb" + itstr, s.problem_matrix().hf_terms().pb_bb);
     m_writer.write("j" + itstr, s.problem_matrix().hf_terms().j_bb);
@@ -87,32 +83,29 @@ protected:
     std::streamsize prec = std::cout.precision();
     std::cout << "   Current HF energies:" << std::endl
               << "     E_kin    = " << hf_energies.energy_kinetic << std::endl
-              << "     E_v0     = " << hf_energies.energy_elec_nuc_attr
-              << std::endl
+              << "     E_v0     = " << hf_energies.energy_elec_nuc_attr << std::endl
               << "     E_coul   = " << hf_energies.energy_coulomb << std::endl
               << "     E_xchge  = " << hf_energies.energy_exchange << std::endl
               << std::endl
               << "     E_1e     = " << hf_energies.energy_1e_terms << std::endl
               << "     E_2e     = " << hf_energies.energy_2e_terms << std::endl
               << std::endl
-              << "     E_total  = " << std::setprecision(15)
-              << hf_energies.energy_total << std::setprecision(prec)
-              << std::endl
+              << "     E_total  = " << std::setprecision(15) << hf_energies.energy_total
+              << std::setprecision(prec) << std::endl
               << "     pulay_error: " << norm_frobenius(error) << std::endl;
   }
 
-private:
+ private:
   linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
 };
 
 template <typename FockType>
 class DiisScfHartreeFock
-      : public PulayDiisScf<PulayDiisScfState<
-              FockType, typename FockType::stored_matrix_type>> {
-public:
+      : public PulayDiisScf<
+              PulayDiisScfState<FockType, typename FockType::stored_matrix_type>> {
+ public:
   typedef FockType fock_type;
-  typedef PulayDiisScf<
-        PulayDiisScfState<FockType, typename FockType::stored_matrix_type>>
+  typedef PulayDiisScf<PulayDiisScfState<FockType, typename FockType::stored_matrix_type>>
         base_type;
   typedef typename base_type::size_type size_type;
   typedef typename base_type::scalar_type scalar_type;
@@ -123,18 +116,16 @@ public:
   DiisScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
-protected:
+ protected:
   matrix_type calculate_error(const state_type& s) const override {
     const fock_type& fock_bb = s.problem_matrix();
-    const MultiVector<vector_type>& coefficients_bf =
-          s.eigensolution().evectors();
+    const MultiVector<vector_type>& coefficients_bf = s.eigensolution().evectors();
     const matrix_type& overlap_bb = s.overlap_matrix();
     return pulay_error(fock_bb, coefficients_bf, overlap_bb);
   }
 
   void before_iteration_step(state_type& s) const override {
-    std::cout << std::endl
-              << "Starting SCF iteration " << s.n_iter() << std::endl;
+    std::cout << std::endl << "Starting SCF iteration " << s.n_iter() << std::endl;
   }
 
   void on_update_eigenpairs(state_type& s) const override {
@@ -165,8 +156,7 @@ protected:
 
     m_writer.write("diiscoeff" + std::to_string(s.n_iter()),
                    as_multivector(s.diis_coefficients));
-    m_writer.write("diisdiagmat" + std::to_string(s.n_iter()),
-                   s.diagonalised_matrix());
+    m_writer.write("diisdiagmat" + std::to_string(s.n_iter()), s.diagonalised_matrix());
   }
 
   void on_update_problem_matrix(state_type& s) const override {
@@ -177,9 +167,8 @@ protected:
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
-    assert_dbg(
-          s.problem_matrix().are_hf_terms_stored(),
-          krims::ExcInvalidState("problem matrix does not store HF terms."));
+    assert_dbg(s.problem_matrix().are_hf_terms_stored(),
+               krims::ExcInvalidState("problem matrix does not store HF terms."));
     m_writer.write("pa" + itstr, s.problem_matrix().hf_terms().pa_bb);
     m_writer.write("pb" + itstr, s.problem_matrix().hf_terms().pb_bb);
     m_writer.write("j" + itstr, s.problem_matrix().hf_terms().j_bb);
@@ -191,17 +180,15 @@ protected:
     std::streamsize prec = std::cout.precision();
     std::cout << "   Current HF energies:" << std::endl
               << "     E_kin    = " << hf_energies.energy_kinetic << std::endl
-              << "     E_v0     = " << hf_energies.energy_elec_nuc_attr
-              << std::endl
+              << "     E_v0     = " << hf_energies.energy_elec_nuc_attr << std::endl
               << "     E_coul   = " << hf_energies.energy_coulomb << std::endl
               << "     E_xchge  = " << hf_energies.energy_exchange << std::endl
               << std::endl
               << "     E_1e     = " << hf_energies.energy_1e_terms << std::endl
               << "     E_2e     = " << hf_energies.energy_2e_terms << std::endl
               << std::endl
-              << "     E_total  = " << std::setprecision(15)
-              << hf_energies.energy_total << std::setprecision(prec)
-              << std::endl;
+              << "     E_total  = " << std::setprecision(15) << hf_energies.energy_total
+              << std::setprecision(prec) << std::endl;
   }
 
   void after_iteration_step(state_type& s) const override {
@@ -212,7 +199,7 @@ protected:
                    base_type::diis_linear_system_matrix(s));
   }
 
-private:
+ private:
   linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
 };
 }  // namespace dummy_scf

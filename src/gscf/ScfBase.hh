@@ -23,12 +23,11 @@ DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
  * \see gscf::ScfStateBase
  * */
 template <typename State>
-class ScfBase
-      : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> {
+class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> {
   static_assert(IsScfState<State>::value,
                 "State needs to be a type derived from ScfStateBase");
 
-public:
+ public:
   typedef linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> base_type;
   typedef typename base_type::state_type state_type;
 
@@ -80,8 +79,7 @@ public:
     n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
     max_error_norm = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
     eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
-    user_eigensolver_tolerance =
-          map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
+    user_eigensolver_tolerance = map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
   }
 
   /** Has the user provided tolerance settings for the eigensolver? */
@@ -128,12 +126,11 @@ public:
    * Here we use the ScfStateBase in order to be able to use
    * states of potentially different state_type as well.
    */
-  template <typename GuessState,
-            typename = krims::enable_if_t<std::is_base_of<
-                  ScfStateBase<probmat_type, overlap_type, diagmat_type>,
-                  GuessState>::value>>
-  state_type solve_with_guess(probmat_type probmat_bb,
-                              const overlap_type& overlap_bb,
+  template <
+        typename GuessState,
+        typename = krims::enable_if_t<std::is_base_of<
+              ScfStateBase<probmat_type, overlap_type, diagmat_type>, GuessState>::value>>
+  state_type solve_with_guess(probmat_type probmat_bb, const overlap_type& overlap_bb,
                               const GuessState& guess_state) const {
     // Create a new state and install the guess state:
     state_type state{std::move(probmat_bb), overlap_bb};
@@ -147,21 +144,20 @@ public:
    * Here we use the EigensolverStateBase in order to be able to use
    * states of potentially different state_type as well.
    */
-  template <typename GuessState,
-            typename = krims::enable_if_t<std::is_base_of<
-                  ScfStateBase<probmat_type, overlap_type, diagmat_type>,
-                  GuessState>::value>>
+  template <
+        typename GuessState,
+        typename = krims::enable_if_t<std::is_base_of<
+              ScfStateBase<probmat_type, overlap_type, diagmat_type>, GuessState>::value>>
   state_type solve_with_guess(const GuessState& guess_state) const {
     // Create a new state and install the guess state:
-    state_type state{guess_state.problem_matrix(),
-                     guess_state.overlap_matrix()};
+    state_type state{guess_state.problem_matrix(), guess_state.overlap_matrix()};
     state.obtain_guess_from(guess_state);
     this->solve_state(state);
     return state;
   }
   ///@}
 
-protected:
+ protected:
   /** \name Handler functions
    * Various virtual handler functions, which are called when
    * certain events happen.
@@ -313,15 +309,12 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
 
         // Solve for full spectrum:
         const auto all = linalgwrap::Constants<size_t>::all;
-        auto solresq =
-              eigensystem_hermitian(problem.A(), problem.B(), all, copy);
+        auto solresq = eigensystem_hermitian(problem.A(), problem.B(), all, copy);
 
-        std::cerr << "  ...  full eigenspectrum of problem:" << std::endl
-                  << std::endl;
+        std::cerr << "  ...  full eigenspectrum of problem:" << std::endl << std::endl;
         std::cerr << "       ";
         std::ostream_iterator<scalar_type> out_it(std::cerr, "  ");
-        std::copy(std::begin(solresq.evalues()), std::end(solresq.evalues()),
-                  out_it);
+        std::copy(std::begin(solresq.evalues()), std::end(solresq.evalues()), out_it);
         std::cerr << std::endl << std::endl;
       }
     } catch (...) {
@@ -352,8 +345,7 @@ void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
     // as we need them in the future.
 
     // Copy the old problem matrix:
-    auto new_problem_matrix_ptr =
-          std::make_shared<probmat_type>(*s.problem_matrix_ptr);
+    auto new_problem_matrix_ptr = std::make_shared<probmat_type>(*s.problem_matrix_ptr);
 
     // Replace the current one in the state:
     s.problem_matrix_ptr = std::move(new_problem_matrix_ptr);

@@ -23,9 +23,9 @@
 namespace gscf {
 
 std::string version::version_string() {
-    std::stringstream ss;
-    ss << major << "." << minor << "." << patch;
-    return ss.str();
+  std::stringstream ss;
+  ss << major << "." << minor << "." << patch;
+  return ss.str();
 }
 
 }  // namespace gscf

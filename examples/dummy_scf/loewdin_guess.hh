@@ -6,8 +6,7 @@ namespace dummy_scf {
 using namespace linalgwrap;
 
 template <typename Matrix>
-MultiVector<typename Matrix::vector_type> loewdin_guess(
-      const Matrix& overlap_bb) {
+MultiVector<typename Matrix::vector_type> loewdin_guess(const Matrix& overlap_bb) {
   typedef typename Matrix::size_type size_type;
   typedef typename Matrix::vector_type vector_type;
 

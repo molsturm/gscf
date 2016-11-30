@@ -16,10 +16,9 @@ using namespace gscfmock;
 namespace error_wrapped_solvers {
 
 template <typename FockType>
-class PlainScf
-      : public gscf::PlainScf<
-              PlainScfState<FockType, typename FockType::stored_matrix_type>> {
-public:
+class PlainScf : public gscf::PlainScf<
+                       PlainScfState<FockType, typename FockType::stored_matrix_type>> {
+ public:
   typedef FockType fock_type;
   typedef typename FockType::stored_matrix_type matrix_type;
   typedef gscf::PlainScf<PlainScfState<FockType, matrix_type>> base_type;
@@ -37,13 +36,13 @@ public:
 };
 
 template <typename FockType>
-class PulayDiisScf : public gscf::PulayDiisScf<PulayDiisScfState<
-                           FockType, typename FockType::stored_matrix_type>> {
-public:
+class PulayDiisScf
+      : public gscf::PulayDiisScf<
+              PulayDiisScfState<FockType, typename FockType::stored_matrix_type>> {
+ public:
   typedef FockType fock_type;
   typedef typename fock_type::stored_matrix_type matrix_type;
-  typedef gscf::PulayDiisScf<PulayDiisScfState<FockType, matrix_type>>
-        base_type;
+  typedef gscf::PulayDiisScf<PulayDiisScfState<FockType, matrix_type>> base_type;
   typedef typename base_type::state_type state_type;
 
   //! Define how we compute the error: Pulay error
@@ -97,32 +96,31 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
 
   // The expected eigenvectors
   MultiVector<vector_type> evec_expected{
-        {-1.1884746467844811, 0., -0.24288050447076578, 0., 0.,
-         0.16813161525502301, 0., 0., 0., 0., 0., 0.016396171817405908, 0., 0.},
-        {-1.064786764522789, 0., 0.8777407505081162, 0., 0.,
-         -0.3081669311487548, 0., 0., 0., 0., 0., -0.028869768632584114, 0.,
-         0.},
-        {0., 0., 0., -3.69049544150639e-9, 0.8573394853277652, 0., 0., 0., 0.,
-         0., 0., 0., 0.00002919059875836615, -0.6818863586007807},
-        {0., 0.9857660367413854, 0., 0., 0., 0., 0., 0., 0.47777120131625944,
-         0., 0., 0., 0., 0.},
-        {0., 0., 0., 0.8573394853277649, 3.69049544151069e-9, 0., 0., 0., 0.,
-         0., 0., 0., -0.6818863586007805, -0.000029190598758366127},
-        {-0.5840485708369669, 0., 0.05174625401524502, 0., 0.,
-         -1.0729001918355632, 0., 0., 0., 0., 0., -0.07137766077631158, 0., 0.},
-        {0., 0., 0., 1.1728582480320243e-9, -0.27246685510597846, 0., 0., 0.,
-         0., 0., 0., 0., 0.000045420745388700296, -1.0610192320620837},
-        {0., -0.033706141181753996, 0., 0., 0., 0., 0., 0., 1.0949264340797673,
-         0., 0., 0., 0., 0.},
-        {0., 0., 0., -0.2724668551059781, -1.1728582480253274e-9, 0., 0., 0.,
-         0., 0., 0., 0., -1.0610192320620837, -0.00004542074538870031},
+        {-1.1884746467844811, 0., -0.24288050447076578, 0., 0., 0.16813161525502301, 0.,
+         0., 0., 0., 0., 0.016396171817405908, 0., 0.},
+        {-1.064786764522789, 0., 0.8777407505081162, 0., 0., -0.3081669311487548, 0., 0.,
+         0., 0., 0., -0.028869768632584114, 0., 0.},
+        {0., 0., 0., -3.69049544150639e-9, 0.8573394853277652, 0., 0., 0., 0., 0., 0., 0.,
+         0.00002919059875836615, -0.6818863586007807},
+        {0., 0.9857660367413854, 0., 0., 0., 0., 0., 0., 0.47777120131625944, 0., 0., 0.,
+         0., 0.},
+        {0., 0., 0., 0.8573394853277649, 3.69049544151069e-9, 0., 0., 0., 0., 0., 0., 0.,
+         -0.6818863586007805, -0.000029190598758366127},
+        {-0.5840485708369669, 0., 0.05174625401524502, 0., 0., -1.0729001918355632, 0.,
+         0., 0., 0., 0., -0.07137766077631158, 0., 0.},
+        {0., 0., 0., 1.1728582480320243e-9, -0.27246685510597846, 0., 0., 0., 0., 0., 0.,
+         0., 0.000045420745388700296, -1.0610192320620837},
+        {0., -0.033706141181753996, 0., 0., 0., 0., 0., 0., 1.0949264340797673, 0., 0.,
+         0., 0., 0.},
+        {0., 0., 0., -0.2724668551059781, -1.1728582480253274e-9, 0., 0., 0., 0., 0., 0.,
+         0., -1.0610192320620837, -0.00004542074538870031},
         {0., 0., 0., 0., 0., 0., -1., 0., 0., 0., 0., 0., 0., 0.},
-        {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.000043369360575274524,
-         0.9999999990595501, 0., 0., 0.},
-        {-0.0019206466502236202, 0., -0.011672197660675484, 0., 0.,
-         0.06685683586559842, 0., 0., 0., 0., 0., -0.9976924548257627, 0., 0.},
-        {0., 0., 0., 0., 0., 0., 0., 0., 0., -0.9999999990595487,
-         0.00004336936057527441, 0., 0., 0.},
+        {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.000043369360575274524, 0.9999999990595501,
+         0., 0., 0.},
+        {-0.0019206466502236202, 0., -0.011672197660675484, 0., 0., 0.06685683586559842,
+         0., 0., 0., 0., 0., -0.9976924548257627, 0., 0.},
+        {0., 0., 0., 0., 0., 0., 0., 0., 0., -0.9999999990595487, 0.00004336936057527441,
+         0., 0., 0.},
         {0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.}};
 
   // The expected energies:
@@ -156,14 +154,10 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
 
     // Check the energies:
     auto hf_energies = res.problem_matrix().energies();
-    CHECK(hf_energies.energy_1e_terms ==
-          numcomp(exp_energy_1e_terms).tolerance(basetol));
-    CHECK(hf_energies.energy_coulomb ==
-          numcomp(exp_energy_coulomb).tolerance(basetol));
-    CHECK(hf_energies.energy_exchange ==
-          numcomp(exp_energy_exchange).tolerance(basetol));
-    CHECK(hf_energies.energy_total ==
-          numcomp(exp_energy_total).tolerance(basetol));
+    CHECK(hf_energies.energy_1e_terms == numcomp(exp_energy_1e_terms).tolerance(basetol));
+    CHECK(hf_energies.energy_coulomb == numcomp(exp_energy_coulomb).tolerance(basetol));
+    CHECK(hf_energies.energy_exchange == numcomp(exp_energy_exchange).tolerance(basetol));
+    CHECK(hf_energies.energy_total == numcomp(exp_energy_total).tolerance(basetol));
   }  // PlainSCF
 
   SECTION("PulayDiisScf") {
@@ -190,14 +184,10 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
 
     // Check the energies:
     auto hf_energies = res.problem_matrix().energies();
-    CHECK(hf_energies.energy_1e_terms ==
-          numcomp(exp_energy_1e_terms).tolerance(basetol));
-    CHECK(hf_energies.energy_coulomb ==
-          numcomp(exp_energy_coulomb).tolerance(basetol));
-    CHECK(hf_energies.energy_exchange ==
-          numcomp(exp_energy_exchange).tolerance(basetol));
-    CHECK(hf_energies.energy_total ==
-          numcomp(exp_energy_total).tolerance(basetol));
+    CHECK(hf_energies.energy_1e_terms == numcomp(exp_energy_1e_terms).tolerance(basetol));
+    CHECK(hf_energies.energy_coulomb == numcomp(exp_energy_coulomb).tolerance(basetol));
+    CHECK(hf_energies.energy_exchange == numcomp(exp_energy_exchange).tolerance(basetol));
+    CHECK(hf_energies.energy_total == numcomp(exp_energy_total).tolerance(basetol));
   }  // PulayDiisScf
 
 }  // TEST_CASE

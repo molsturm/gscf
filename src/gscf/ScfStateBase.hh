@@ -16,13 +16,12 @@ class ScfStateBase
       : public linalgwrap::IterativeStateWrapper<linalgwrap::SolverStateBase> {
 
   static_assert(
-        std::is_same<
-              typename linalgwrap::StoredTypeOf<ProblemMatrix>::type,
-              typename linalgwrap::StoredTypeOf<OverlapMatrix>::type>::value,
+        std::is_same<typename linalgwrap::StoredTypeOf<ProblemMatrix>::type,
+                     typename linalgwrap::StoredTypeOf<OverlapMatrix>::type>::value,
         "The stored matrix types of OverlapMatrix and ProblemMatrix have to "
         "agree.");
 
-public:
+ public:
   /** \name Type definitions */
   ///@{
   /** The type of the problem matrix, i.e. the non-linear problem
@@ -76,7 +75,7 @@ public:
     eprob_stats_t(size_t n_iter, size_t n_mtx_applies)
           : m_n_iter(n_iter), m_n_mtx_applies(n_mtx_applies) {}
 
-  private:
+   private:
     size_t m_n_iter = 0;
     size_t m_n_mtx_applies = 0;
   };
@@ -102,9 +101,7 @@ public:
    * algorithms (like PlainSCF), but may also me different (like in a
    * DiisScf).
    */
-  const diagmat_type& diagonalised_matrix() const {
-    return *diagonalised_matrix_ptr;
-  }
+  const diagmat_type& diagonalised_matrix() const { return *diagonalised_matrix_ptr; }
 
   /** \brief Access to the matrix which is diagonalised in order to
    * obtain the new eigenpairs.
@@ -119,9 +116,7 @@ public:
   const esoln_type& eigensolution() const { return m_eigensolution; }
 
   /** Access the eigensolution before the one stored in eigensolution() */
-  const esoln_type& previous_eigensolution() const {
-    return m_prev_eigensolution;
-  }
+  const esoln_type& previous_eigensolution() const { return m_prev_eigensolution; }
 
   /** Access to some statistics (number of iterations, number of applies)
    *  of the most recent eigenproblem which was solved to obtain the
@@ -131,8 +126,7 @@ public:
 
   /** Update the eigensolution stored in the state along with its
    * statistics */
-  void push_new_eigensolution(esoln_type new_eigensolution,
-                              eprob_stats_t new_stats);
+  void push_new_eigensolution(esoln_type new_eigensolution, eprob_stats_t new_stats);
 
   /** The number of problem matrix applies needed so far to
    *  solve the scf problem
@@ -155,17 +149,14 @@ public:
         : linalgwrap::IterativeStateWrapper<
                 linalgwrap::SolverStateBase>{linalgwrap::SolverStateBase()},
           last_error_norm{linalgwrap::Constants<real_type>::invalid},
-          problem_matrix_ptr{
-                std::make_shared<probmat_type>(std::move(prob_mat))},
+          problem_matrix_ptr{std::make_shared<probmat_type>(std::move(prob_mat))},
           diagonalised_matrix_ptr{nullptr},
           m_n_mtx_applies(0),
-          m_overlap_matrix_ptr{
-                krims::make_subscription(overlap_mat, "ScfState")},
+          m_overlap_matrix_ptr{krims::make_subscription(overlap_mat, "ScfState")},
           m_eigensolution{},
           m_prev_eigensolution{} {
     // Check that we really get a hermitian matrix as we implicitly assume.
-    assert_dbg(problem_matrix_ptr->is_hermitian(),
-               linalgwrap::ExcMatrixNotHermitian());
+    assert_dbg(problem_matrix_ptr->is_hermitian(), linalgwrap::ExcMatrixNotHermitian());
     // Note: This assumption is build into the update_eigenpairs method
     //       of ScfBase.
   }
@@ -174,8 +165,7 @@ public:
   ///@{
   /** Setup the guess of this state. from another state. */
   template <typename DiagMat>
-  void obtain_guess_from(
-        const ScfStateBase<diagmat_type, overlap_type, DiagMat>& other) {
+  void obtain_guess_from(const ScfStateBase<diagmat_type, overlap_type, DiagMat>& other) {
     m_eigensolution = other.m_eigensolution;
     m_prev_eigensolution = other.m_prev_eigensolution;
   }
@@ -183,9 +173,7 @@ public:
   /** Setup the guess of this state. from another eigensolution.
    *
    */
-  void obtain_guess_from(const esoln_type& other_soln) {
-    m_eigensolution = other_soln;
-  }
+  void obtain_guess_from(const esoln_type& other_soln) { m_eigensolution = other_soln; }
   ///@}
 
   /** \name Advanced access to matrix pointers
@@ -203,7 +191,7 @@ public:
    *  different like in a DIIS-SCF */
   std::shared_ptr<diagmat_type> diagonalised_matrix_ptr;
   ///@}
-private:
+ private:
   /** Statistics about the most recent inner eigensolver call */
   eprob_stats_t m_eprob_stats;
 
@@ -227,10 +215,9 @@ private:
   // this is as of now always the vector_type of the stored matrix for
   // the eigenvectors and the scalar type for the eigenvalues.
   // This is just here to check that this is really what we get.
-  static_assert(
-        std::is_same<esoln_type, typename linalgwrap::EigensolutionTypeFor<
-                                       true, diagmat_type>>::value,
-        "Problem when determining the eigensolution type");
+  static_assert(std::is_same<esoln_type, typename linalgwrap::EigensolutionTypeFor<
+                                               true, diagmat_type>>::value,
+                "Problem when determining the eigensolution type");
 };
 
 //@{
@@ -241,9 +228,8 @@ template <typename T, typename = void>
 struct IsScfState : public std::false_type {};
 
 template <typename T>
-struct IsScfState<
-      T, krims::VoidType<typename T::probmat_type, typename T::overlap_type,
-                         typename T::diagmat_type>>
+struct IsScfState<T, krims::VoidType<typename T::probmat_type, typename T::overlap_type,
+                                     typename T::diagmat_type>>
       : public std::is_base_of<
               ScfStateBase<typename T::probmat_type, typename T::overlap_type,
                            typename T::diagmat_type>,
@@ -254,11 +240,9 @@ struct IsScfState<
 // --------------------------------------------------------
 //
 
-template <typename ProblemMatrix, typename OverlapMatrix,
-          typename DiagonalisedMatrix>
+template <typename ProblemMatrix, typename OverlapMatrix, typename DiagonalisedMatrix>
 void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::
-      push_new_eigensolution(esoln_type new_eigensolution,
-                             eprob_stats_t new_stats) {
+      push_new_eigensolution(esoln_type new_eigensolution, eprob_stats_t new_stats) {
   // If memory is really an issue one should have the option to bin the previous
   // eigensolution instead.
   m_prev_eigensolution = m_eigensolution;

@@ -5,7 +5,7 @@ namespace gscfmock {
 
 /** Class for dummy integrals around an atom */
 class IntegralDataBase : public krims::Subscribable {
-public:
+ public:
   typedef double scalar_type;
   typedef linalgwrap::SmallMatrix<scalar_type> matrix_type;
   typedef typename matrix_type::size_type size_type;

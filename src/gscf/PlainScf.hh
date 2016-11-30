@@ -10,8 +10,7 @@ namespace gscf {
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
 template <typename ProblemMatrix, typename OverlapMatrix>
-struct PlainScfState
-      : public ScfStateBase<ProblemMatrix, OverlapMatrix, ProblemMatrix> {
+struct PlainScfState : public ScfStateBase<ProblemMatrix, OverlapMatrix, ProblemMatrix> {
   typedef ScfStateBase<ProblemMatrix, OverlapMatrix, ProblemMatrix> base_type;
   typedef typename base_type::probmat_type probmat_type;
   typedef typename base_type::overlap_type overlap_type;
@@ -52,7 +51,7 @@ struct PlainScfState
  */
 template <typename ScfState>
 class PlainScf : public ScfBase<ScfState> {
-public:
+ public:
   typedef ScfBase<ScfState> base_type;
   typedef typename base_type::state_type state_type;
 
@@ -64,9 +63,9 @@ public:
   // typedef typename state_type::scalar_type scalar_type;
   typedef typename state_type::matrix_type matrix_type;
 
-  static_assert(std::is_base_of<PlainScfState<probmat_type, overlap_type>,
-                                ScfState>::value,
-                "ScfState needs to be derived off PulayDiisScfState");
+  static_assert(
+        std::is_base_of<PlainScfState<probmat_type, overlap_type>, ScfState>::value,
+        "ScfState needs to be derived off PulayDiisScfState");
 
   /** \name Constructor */
   //@{
@@ -74,9 +73,7 @@ public:
   PlainScf() {}
 
   /** Construct a plain SCF solver setting the parameters from the map */
-  PlainScf(const krims::ParameterMap& map) : PlainScf() {
-    update_control_params(map);
-  }
+  PlainScf(const krims::ParameterMap& map) : PlainScf() { update_control_params(map); }
   //@}
 
   /** \name Iteration control */
@@ -104,8 +101,7 @@ public:
 
 template <typename ScfState>
 void PlainScf<ScfState>::solve_state(state_type& state) const {
-  assert_dbg(!state.is_failed(),
-             krims::ExcInvalidState("Cannot solve a failed state"));
+  assert_dbg(!state.is_failed(), krims::ExcInvalidState("Cannot solve a failed state"));
 
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);

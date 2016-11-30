@@ -54,6 +54,9 @@ public:
 
   /** The type of the stored matrices as determined by the traits */
   typedef typename state_type::matrix_type matrix_type;
+
+  /** The type of the vector as determined by the traits */
+  typedef typename state_type::vector_type vector_type;
   ///@}
 
   /** \name Iteration control */
@@ -120,17 +123,39 @@ public:
     return state;
   }
 
-  /** \brief Run the solver starting from an old SCF state.
+  /** \brief Run the solver on a problem, starting from a guess state
    *
-   * It is assumed, that the input state is not failed.
-   * Note that the fail bit can be unset using the clear_failed() function
-   * in order to continue off a failed state using different solver
-   * control parameters or methods.
+   * Here we use the ScfStateBase in order to be able to use
+   * states of potentially different state_type as well.
    */
-  virtual state_type solve(const state_type& old_state) const {
-    assert_dbg(!old_state.is_failed(),
-               krims::ExcInvalidState("Cannot make use of a failed state"));
-    state_type state{old_state};
+  template <typename GuessState,
+            typename = krims::enable_if_t<std::is_base_of<
+                  ScfStateBase<probmat_type, overlap_type, diagmat_type>,
+                  GuessState>::value>>
+  state_type solve_with_guess(probmat_type probmat_bb,
+                              const overlap_type& overlap_bb,
+                              const GuessState& guess_state) const {
+    // Create a new state and install the guess state:
+    state_type state{std::move(probmat_bb), overlap_bb};
+    state.obtain_guess_from(guess_state);
+    this->solve_state(state);
+    return state;
+  }
+
+  /** \brief Run the solver on a problem, starting from a guess state
+   *
+   * Here we use the EigensolverStateBase in order to be able to use
+   * states of potentially different state_type as well.
+   */
+  template <typename GuessState,
+            typename = krims::enable_if_t<std::is_base_of<
+                  ScfStateBase<probmat_type, overlap_type, diagmat_type>,
+                  GuessState>::value>>
+  state_type solve_with_guess(const GuessState& guess_state) const {
+    // Create a new state and install the guess state:
+    state_type state{guess_state.problem_matrix(),
+                     guess_state.overlap_matrix()};
+    state.obtain_guess_from(guess_state);
     this->solve_state(state);
     return state;
   }
@@ -161,14 +186,16 @@ protected:
    * certain events happen.
    */
   ///@{
-  /** Calculate the error matrix of a provided scf state.
+  /** Calculate the error from a provided scf state, which should be
+   *  a PulayDiisScfState.
    *
    *  This implementation calculates the residual error, i.e. the difference
    *  vectors between the current and the most recent eigenvectors.
+   *
+   * \note This function is called once the updated problem matrix has
+   * been obtained.
    **/
-  virtual matrix_type calculate_error(const state_type&) const {
-    return matrix_type{{linalgwrap::Constants<scalar_type>::invalid}};
-  }
+  virtual matrix_type calculate_error(const state_type&) const;
 
   /** Update the last_error_norm using the calculate_error function. */
   void update_last_error_norm(state_type& s) const {
@@ -220,6 +247,29 @@ protected:
 //
 
 template <typename ScfState>
+typename ScfBase<ScfState>::matrix_type ScfBase<ScfState>::calculate_error(
+      const state_type& s) const {
+  if (s.previous_eigensolution().evectors().n_vectors() == 0) {
+    // Cannot compute any matrix, since no previous vectors
+    // to compare against:
+    return matrix_type{{linalgwrap::Constants<scalar_type>::invalid}};
+  }
+
+  const auto& prev_evec = s.previous_eigensolution().evectors();
+  const auto& cur_evec = s.eigensolution().evectors();
+  matrix_type ret(prev_evec.n_elem(), prev_evec.n_vectors(), false);
+  for (size_type j = 0; j < cur_evec.n_vectors(); ++j) {
+    for (size_type i = 0; i < cur_evec.n_elem(); ++i) {
+      const vector_type& c = cur_evec[j];
+      const vector_type& p = prev_evec[j];
+      ret(i, j) = c(i) - p(i);
+    }  // i == row
+  }    // j == col
+
+  return ret;
+}
+
+template <typename ScfState>
 void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
   using namespace linalgwrap;
 
@@ -242,18 +292,13 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
   // then we do.
   EigensystemSolver<eprob_type> solver{eigensolver_params};
   if (!user_eigensolver_tolerance) {
-    solver.update_control_params(
-          {{EigensystemSolverKeys::tolerance, inner_solver_tolerance(s)}});
+    solver.tolerance = inner_solver_tolerance(s);
   }
 
   try {
     solver.solve_state(state);
-
-    // TODO This is a lot of redundant copying code.
-    //      Can one make that better?
-    s.eigensolution() = state.eigensolution();
-    s.eigenproblem_stats().n_iter() = state.n_iter();
-    s.eigenproblem_stats().n_mtx_applies() = state.n_mtx_applies();
+    s.push_new_eigensolution(state.eigensolution(),
+                             {state.n_iter(), state.n_mtx_applies()});
   } catch (const linalgwrap::SolverException& e) {
 #ifdef DEBUG
     try {
@@ -264,7 +309,7 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
         krims::ParameterMap copy(eigensolver_params);
         copy.update(EigensystemSolverKeys::method, "auto");
         copy.update(EigensystemSolverKeys::tolerance,
-                    Constants<real_type>::default_tolerance);
+                    linalgwrap::Constants<real_type>::default_tolerance);
 
         // Solve for full spectrum:
         const auto all = linalgwrap::Constants<size_t>::all;

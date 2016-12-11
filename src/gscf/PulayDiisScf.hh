@@ -269,12 +269,6 @@ template <typename ScfState>
 void PulayDiisScf<ScfState>::solve_state(state_type& state) const {
   assert_dbg(!state.is_failed(), krims::ExcInvalidState("Cannot solve a failed state"));
 
-  // TODO deal with the guess: We have one (maybe two) old eigensolutions for
-  // use
-  //      in the state.
-  assert_dbg(state.eigensolution().evectors().n_vectors() == 0,
-             krims::ExcNotImplemented());
-
   // Resize the buffers in the state to hold
   // the appropriate number of recent SCF steps
   state.resize_buffers(n_prev_steps);

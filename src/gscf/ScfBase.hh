@@ -4,6 +4,7 @@
 #include <linalgwrap/Base/Solvers.hh>
 #include <linalgwrap/EigensystemSolver.hh>
 #include <linalgwrap/eigensystem.hh>
+#include <linalgwrap/rescue.hh>
 
 namespace gscf {
 
@@ -296,33 +297,7 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
     s.push_new_eigensolution(state.eigensolution(),
                              {state.n_iter(), state.n_mtx_applies()});
   } catch (const linalgwrap::SolverException& e) {
-#ifdef DEBUG
-    try {
-      if (problem.dim() < 1000) {
-        std::cerr << "The inner eigensolver failed";
-
-        // Overwrite some user parameters:
-        krims::ParameterMap copy(eigensolver_params);
-        copy.update(EigensystemSolverKeys::method, "auto");
-        copy.update(EigensystemSolverKeys::tolerance,
-                    linalgwrap::Constants<real_type>::default_tolerance);
-
-        // Solve for full spectrum:
-        const auto all = linalgwrap::Constants<size_t>::all;
-        auto solresq = eigensystem_hermitian(problem.A(), problem.B(), all, copy);
-
-        std::cerr << "  ...  full eigenspectrum of problem:" << std::endl << std::endl;
-        std::cerr << "       ";
-        std::ostream_iterator<scalar_type> out_it(std::cerr, "  ");
-        std::copy(std::begin(solresq.evalues()), std::end(solresq.evalues()), out_it);
-        std::cerr << std::endl << std::endl;
-      }
-    } catch (...) {
-      std::cerr << "   ...  but the attempt to solve for the full spectrum "
-                   "failed as well."
-                << std::endl;
-    }
-#endif  // DEBUG
+    linalgwrap::rescue::failed_eigenproblem(problem, eigensolver_params);
     solver_assert(false, s, ExcInnerEigensolverFailed(e.extra()));
   }
   // Call the handler

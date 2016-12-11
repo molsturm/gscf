@@ -31,4 +31,9 @@ update_file "krims" "cmake/findRapidcheck.cmake" || exit 1
 update_file "krims" "cmake/findCatch.cmake" || exit 1
 update_file "linalgwrap" "cmake/findKrims.cmake" || exit 1
 
+update_file "krims" "templates/cc.template" "keep_header" || exit 1
+update_file "krims" "templates/cmake.template" "keep_header" || exit 1
+update_file "krims" "templates/hh.template" "keep_header" || exit 1
+update_file "krims" "templates/README.md" || exit 1
+
 update_file "linalgwrap" "update_from_sisters.lib.sh" || exit 1

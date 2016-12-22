@@ -67,9 +67,6 @@ if ("${rapidcheck_DIR}" STREQUAL "rapidcheck_DIR-NOTFOUND")
 		#
 		# Proceed to configure rapidcheck
 		#
-		# Set option such that rapidcheck tests are built.
-		set(RC_ENABLE_TESTS ON CACHE BOOL "Build RapidCheck tests")
-
 		# Change compiler flags (CMAKE_CXX_FLAGS) to make fresh build config
 		set(CMAKE_CXX_FLAGS_STORED_TMP ${CMAKE_CXX_FLAGS})
 		set(CMAKE_CXX_FLAGS "")
@@ -96,7 +93,7 @@ if ("${rapidcheck_DIR}" STREQUAL "rapidcheck_DIR-NOTFOUND")
 
 	message(FATAL_ERROR "Could not find rapidcheck library.
 Either disable testing of ${PROJECT_NAME} by setting ${PROJECT_UPPER}_ENABLE_TESTS to OFF \
-or enable autocheckout via -DAUTOCHECKOUT_MISSING_REPOS=ON.")
+or enable autocheckout via '-DAUTOCHECKOUT_MISSING_REPOS=ON'.")
 endif()
 
 message(WARNING "This part of findRapidcheck has never been tested.")

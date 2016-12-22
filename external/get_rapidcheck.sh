@@ -28,13 +28,13 @@
 # Settings
 #
 # The git repo to checkout
-FROM="https://github.com/emil-e/rapidcheck"
+FROM="https://github.com/emil-e/rapidcheck.git"
 
 # Folder to check it out to
 WHAT="rapidcheck"
 
-# Interval: How often to update:
-INTERVAL="1 hour"
+# Interval: How often to update (in seconds)
+INTERVAL="3600"
 
 # File to use in order to test a successful checkout
 CHECKFILE="CMakeLists.txt"

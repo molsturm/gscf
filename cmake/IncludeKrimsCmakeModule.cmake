@@ -1,5 +1,22 @@
 ## ---------------------------------------------------------------------
-## Put licence text here
+##
+## Copyright (C) 2016 by the gscf authors
+##
+## This file is part of gscf.
+##
+## gscf is free software: you can redistribute it and/or modify
+## it under the terms of the GNU Lesser General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## gscf is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public License
+## along with gscf. If not, see <http://www.gnu.org/licenses/>.
+##
 ## ---------------------------------------------------------------------
 
 ## DO NOT EDIT
@@ -61,5 +78,5 @@ function(include_krims_cmake_module MODULE)
 
 	message(FATAL_ERROR "Could not find the ${MODULE} module.
 Either provide the installation prefix of the krims library in the environment \
-variable krims_DIR or enable autocheckout via -DAUTOCHECKOUT_MISSING_REPOS=ON.")
+variable krims_DIR or enable autocheckout via '-DAUTOCHECKOUT_MISSING_REPOS=ON'.")
 endfunction(include_krims_cmake_module)

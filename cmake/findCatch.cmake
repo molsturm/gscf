@@ -95,7 +95,7 @@ if ("${catch_INCLUDE_DIR}" STREQUAL "catch_INCLUDE_DIR-NOTFOUND")
 
 	message(FATAL_ERROR "Could not find catch include directory. 
 Either disable testing of ${PROJECT_NAME} by setting ${PROJECT_UPPER}_ENABLE_TESTS to OFF \
-or enable autocheckout via -DAUTOCHECKOUT_MISSING_REPOS=ON \
+or enable autocheckout via '-DAUTOCHECKOUT_MISSING_REPOS=ON' \
 or provide a hint where the catch include file can be found via \
 the environment variable catch_INCLUDE_DIR.")
 endif()

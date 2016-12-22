@@ -63,6 +63,7 @@ if ("${linalgwrap_DIR}" STREQUAL "linalgwrap_DIR-NOTFOUND")
 		#
 		add_subdirectory(${PROJECT_SOURCE_DIR}/external/linalgwrap)
 		include_directories(${PROJECT_SOURCE_DIR}/external/linalgwrap/src)
+		include_directories(${PROJECT_BINARY_DIR}/external/linalgwrap/src)
 
 		# Extract version from CMakeLists.txt:
 		file(STRINGS "${PROJECT_SOURCE_DIR}/external/linalgwrap/CMakeLists.txt"

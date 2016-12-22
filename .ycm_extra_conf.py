@@ -14,8 +14,14 @@ flags = [
     # https://programmers.stackexchange.com/questions/122608#124574
     '-Wall',
     '-Wextra',
-    '-Werror',
+    '-Wnon-virtual-dtor',
+    '-Woverloaded-virtual',
+    '-Wold-style-cast',
+    '-Wcast-align',
+    '-Wconversion',
+    '-Wsign-conversion',
     '-pedantic',
+    '-Werror',
     # Generate unwind information
     '-fexceptions',
     # Compile debug code as well
@@ -23,6 +29,7 @@ flags = [
     # Compile extra code blocks:
     # '-DLINALGWRAP_HAVE_GLIBC_STACKTRACE',
     '-DLINALGWRAP_HAVE_ARMADILLO',
+    '-DLINALGWRAP_HAVE_ARPACK',
     # C++14 code blocks:
     '-DLINALGWRAP_HAVE_CXX14',
     '-DKRIMS_HAVE_CXX14',

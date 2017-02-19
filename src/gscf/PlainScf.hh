@@ -1,7 +1,7 @@
 #pragma once
 #include "ScfBase.hh"
 #include "ScfStateBase.hh"
-#include <krims/ParameterMap.hh>
+#include <krims/GenMap.hh>
 
 namespace gscf {
 
@@ -73,20 +73,20 @@ class PlainScf : public ScfBase<ScfState> {
   PlainScf() {}
 
   /** Construct a plain SCF solver setting the parameters from the map */
-  PlainScf(const krims::ParameterMap& map) : PlainScf() { update_control_params(map); }
+  PlainScf(const krims::GenMap& map) : PlainScf() { update_control_params(map); }
   //@}
 
   /** \name Iteration control */
   ///@{
   /** Update control parameters from Parameter map */
-  void update_control_params(const krims::ParameterMap& map) {
+  void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
   }
 
   /** Get the current settings of all internal control parameters and
-   *  update the ParameterMap accordingly.
+   *  update the GenMap accordingly.
    */
-  void get_control_params(krims::ParameterMap& map) const {
+  void get_control_params(krims::GenMap& map) const {
     base_type::get_control_params(map);
   }
   ///@}

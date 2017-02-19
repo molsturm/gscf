@@ -26,7 +26,7 @@ class PlainScfHartreeFock
   //
   // Constructor
   // TODO not the way we would do it now
-  // => we need a way to feed the solver with a ParameterMap
+  // => we need a way to feed the solver with a GenMap
   PlainScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 

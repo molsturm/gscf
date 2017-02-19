@@ -65,7 +65,7 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
   size_type n_eigenpairs = linalgwrap::Constants<size_type>::all;
 
   /** The parameters for the inner eigensolver */
-  krims::ParameterMap eigensolver_params;
+  krims::GenMap eigensolver_params;
 
   /** Maximum value the Frobenius norm of the
    *  most recent error vector/matrix may have. */
@@ -75,7 +75,7 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    *
    * For the list of available keys, see ScfBaseKeys.hh
    */
-  void update_control_params(const krims::ParameterMap& map) {
+  void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
     n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
     max_error_norm = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
@@ -87,9 +87,9 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
   bool user_eigensolver_tolerance = false;
 
   /** Get the current settings of all internal control parameters and
-   *  update the ParameterMap accordingly.
+   *  update the GenMap accordingly.
    */
-  void get_control_params(krims::ParameterMap& map) const {
+  void get_control_params(krims::GenMap& map) const {
     base_type::get_control_params(map);
     map.update(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
     map.update(ScfBaseKeys::max_error_norm, max_error_norm);

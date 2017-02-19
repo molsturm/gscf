@@ -160,7 +160,7 @@ class FockMatrix : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix
    * It expects the new coefficients under the parameter key
    * returned by scf_update_key()
    */
-  void update(const krims::ParameterMap& map) override {
+  void update(const krims::GenMap& map) override {
     if (map.exists(m_update_key)) {
       build_fock_matrix_from_coefficient(
             map.at<const linalgwrap::MultiVector<vector_type>>(m_update_key));

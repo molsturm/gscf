@@ -145,9 +145,7 @@ class PulayDiisScf : public ScfBase<ScfState> {
   PulayDiisScf() {}
 
   /** Construct a DIIS SCF solver setting the parameters from the map */
-  PulayDiisScf(const krims::ParameterMap& map) : PulayDiisScf() {
-    update_control_params(map);
-  }
+  PulayDiisScf(const krims::GenMap& map) : PulayDiisScf() { update_control_params(map); }
   //@}
 
   /** \name Iteration control */
@@ -156,15 +154,15 @@ class PulayDiisScf : public ScfBase<ScfState> {
   size_type n_prev_steps = 5;
 
   /** Update control parameters from Parameter map */
-  void update_control_params(const krims::ParameterMap& map) {
+  void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
     n_prev_steps = map.at(PulayDiisScfKeys::n_prev_steps, n_prev_steps);
   }
 
   /** Get the current settings of all internal control parameters and
-   *  update the ParameterMap accordingly.
+   *  update the GenMap accordingly.
    */
-  void get_control_params(krims::ParameterMap& map) const {
+  void get_control_params(krims::GenMap& map) const {
     base_type::get_control_params(map);
     map.update(PulayDiisScfKeys::n_prev_steps, n_prev_steps);
   }
@@ -361,7 +359,7 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
 
   try {
     // Solver tolerance: Don't solve more accurate that we have to.
-    const krims::ParameterMap param{{"tolerance", base_type::inner_solver_tolerance(s)}};
+    const krims::GenMap param{{"tolerance", base_type::inner_solver_tolerance(s)}};
 
     vector_type x(n_errors + 1, /* zero= */ false);
     linalgwrap::solve_hermitian(B, x, rhs, param);

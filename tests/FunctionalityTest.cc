@@ -25,7 +25,7 @@ class PlainScf : public gscf::PlainScf<
   typedef typename base_type::state_type state_type;
 
   PlainScf() : base_type() {}
-  PlainScf(const ParameterMap& map) : base_type(map) {}
+  PlainScf(const GenMap& map) : base_type(map) {}
 
   matrix_type calculate_error(const state_type& s) const override {
     const auto& fock_bb = s.problem_matrix();
@@ -54,7 +54,7 @@ class PulayDiisScf
   }
 
   PulayDiisScf() : base_type() {}
-  PulayDiisScf(const ParameterMap& map) : base_type(map) {}
+  PulayDiisScf(const GenMap& map) : base_type(map) {}
 };
 
 }  // namespace error_wrapped_solvers

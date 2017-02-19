@@ -10,6 +10,13 @@ class IntegralDataBase : public krims::Subscribable {
   typedef linalgwrap::SmallMatrix<scalar_type> matrix_type;
   typedef typename matrix_type::size_type size_type;
 
+  IntegralDataBase() = default;
+  virtual ~IntegralDataBase() = default;
+  IntegralDataBase(IntegralDataBase&&) = default;
+  IntegralDataBase(const IntegralDataBase&) = default;
+  IntegralDataBase& operator=(IntegralDataBase&&) = default;
+  IntegralDataBase& operator=(const IntegralDataBase&) = default;
+
   virtual size_type nbas() const = 0;
 
   /** \name Data access */

@@ -332,6 +332,9 @@ PulayDiisScf<ScfState>::diis_linear_system_matrix(const state_type& s) const {
   // Fill the remaining B matrix element in the extra row.
   B(n_errors, n_errors) = 0.;
 
+  // The B matrix needs to be real symmetric by definition
+  B.add_properties(linalgwrap::OperatorProperties::RealSymmetric);
+
   return B;
 }
 
@@ -362,7 +365,7 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
     const krims::GenMap param{{"tolerance", base_type::inner_solver_tolerance(s)}};
 
     vector_type x(n_errors + 1, /* zero= */ false);
-    linalgwrap::solve_hermitian(B, x, rhs, param);
+    linalgwrap::solve(B, x, rhs, param);
 
     // Keep the first n_errors entries of the vector.
     // TODO more clever way to do this?

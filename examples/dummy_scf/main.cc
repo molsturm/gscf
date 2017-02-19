@@ -1,3 +1,7 @@
+// Setup the krims exception system for the tests.
+#define KRIMS_INIT_EXCEPTION_SYSTEM
+#include <krims/ExceptionSystem.hh>
+
 #include "ScfLibrary.hh"
 #include "loewdin_guess.hh"
 #include <gscf/version.hh>

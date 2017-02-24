@@ -61,6 +61,7 @@ find_path(catch_INCLUDE_DIR catch.hpp
 	${PROJECT_SOURCE_DIR}/../krims/modules/catch/include
 	DOC "catch include directory"
 )
+mark_as_advanced(catch_INCLUDE_DIR)
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_UPPER)
 if ("${catch_INCLUDE_DIR}" STREQUAL "catch_INCLUDE_DIR-NOTFOUND")

@@ -46,7 +46,8 @@ endif()
 
 # Try to find linalgwrap somewhere
 find_package(linalgwrap ${LINALGWRAP_VERSION} QUIET CONFIG)
-string(TOUPPER "${PROJECT_NAME}" PROJECT_UPPER)
+mark_as_advanced(linalgwrap_DIR)
+
 if ("${linalgwrap_DIR}" STREQUAL "linalgwrap_DIR-NOTFOUND")
 	if (AUTOCHECKOUT_MISSING_REPOS)
 		execute_process(

@@ -50,7 +50,8 @@ endif()
 
 # Try to find krims somewhere
 find_package(krims ${KRIMS_VERSION} QUIET CONFIG)
-string(TOUPPER "${PROJECT_NAME}" PROJECT_UPPER)
+mark_as_advanced(krims_DIR)
+
 if ("${krims_DIR}" STREQUAL "krims_DIR-NOTFOUND")
 	if (AUTOCHECKOUT_MISSING_REPOS)
 		execute_process(

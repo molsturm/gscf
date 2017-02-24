@@ -52,6 +52,8 @@ endif()
 
 # Try to find rapidcheck somewhere
 find_package(rapidcheck QUIET CONFIG)
+mark_as_advanced(rapidcheck_DIR)
+
 string(TOUPPER "${PROJECT_NAME}" PROJECT_UPPER)
 if ("${rapidcheck_DIR}" STREQUAL "rapidcheck_DIR-NOTFOUND")
 	if (AUTOCHECKOUT_MISSING_REPOS)

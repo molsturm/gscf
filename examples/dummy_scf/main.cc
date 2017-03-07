@@ -32,9 +32,8 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   std::stringstream filename;
   filename << "/tmp/debug_gscf_scfdummy_" << Z << "_" << k_exp << "_sturm14.m";
   std::ofstream mathematicafile(filename.str());
-  auto debugout =
-        linalgwrap::io::make_formatted_stream_writer<linalgwrap::io::Mathematica,
-                                                     scalar_type>(mathematicafile, 1e-5);
+  auto debugout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica, scalar_type>(
+        mathematicafile, 1e-5);
 
   // Define integral data:
   idata_type idata(Z, k_exp);

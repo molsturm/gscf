@@ -1,4 +1,5 @@
 #pragma once
+#include "ScfProblemMatrix_i.hh"
 #include <linalgwrap/Base/Solvers.hh>
 
 namespace gscf {
@@ -9,15 +10,11 @@ namespace gscf {
 struct EigenproblemStatistics {
   /** Number of iterations the most recent eigensolver invocation needed
    *  to solve the problem. */
-  //@{
   size_t n_iter() const { return m_n_iter; }
-  //@}
 
   /** Number of matrix applies the most recent eigensolver invocation
    *  needed to solve the problem */
-  //@{
   size_t n_mtx_applies() const { return m_n_mtx_applies; }
-  //@}
 
   EigenproblemStatistics() {}
   EigenproblemStatistics(size_t n_iter, size_t n_mtx_applies)
@@ -39,6 +36,10 @@ template <typename ProblemMatrix, typename OverlapMatrix,
           typename DiagonalisedMatrix = ProblemMatrix>
 class ScfStateBase
       : public linalgwrap::IterativeStateWrapper<linalgwrap::SolverStateBase> {
+
+  static_assert(std::is_base_of<ScfProblemMatrix_i, ProblemMatrix>::value,
+                "The ProblemMatrix needs to be derived off ScfProblemMatrix_i for SCF "
+                "algorithms to work.");
 
   static_assert(
         std::is_same<typename linalgwrap::StoredTypeOf<ProblemMatrix>::type,

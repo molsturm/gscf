@@ -1,5 +1,6 @@
 #pragma once
 #include "Integrals/IntegralDataBase.hh"
+#include <gscf/FocklikeMatrix_i.hh>
 #include <linalgwrap/LazyMatrix_i.hh>
 #include <linalgwrap/io.hh>
 
@@ -68,7 +69,9 @@ struct HFTerms {
 /** Very simple and slow implementation of a Fock matrix class for a
  * closed-shell System */
 template <typename IntegralData>
-class FockMatrix : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix_type> {
+class FockMatrix final
+      : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix_type>,
+        public gscf::FocklikeMatrix_i<typename IntegralData::matrix_type::scalar_type> {
   static_assert(std::is_base_of<IntegralDataBase, IntegralData>::value,
                 "IntegralData needs to be derived from IntegralDataBase");
 
@@ -152,7 +155,7 @@ class FockMatrix : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix
   }
 
   /** Return the scf update key */
-  const std::string& scf_update_key() const { return m_update_key; }
+  const std::string& scf_update_key() const override { return m_update_key; }
 
   /** Update the inner state:
    * Build the Fock matrix with the new coefficients
@@ -170,6 +173,9 @@ class FockMatrix : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix
   /** Return the current set of energies, calculated at the most recent update
    */
   const energies_type& energies() const { return m_energies; }
+
+  scalar_type energy_1e_terms() const override { return m_energies.energy_1e_terms; }
+  scalar_type energy_2e_terms() const override { return m_energies.energy_2e_terms; }
 
   /** Return the Hartree Fock terms
    *
@@ -191,6 +197,23 @@ class FockMatrix : public linalgwrap::LazyMatrix_i<typename IntegralData::matrix
 
   /** Get the number of beta electrons */
   size_type n_beta() const { return m_n_beta; }
+
+  virtual krims::Range<size_t> indices_subspace(gscf::OrbitalSpace osp) const override {
+    using gscf::OrbitalSpace;
+    switch (osp) {
+      case OrbitalSpace::OCC_ALPHA:
+        return {0, m_n_alpha};
+      case OrbitalSpace::OCC_BETA:
+        return {0, m_n_alpha};
+      case OrbitalSpace::VIRT_ALPHA:
+        return {m_n_alpha, n_rows()};
+      case OrbitalSpace::VIRT_BETA:
+        return {m_n_beta, n_rows()};
+    }
+
+    assert_dbg(false, krims::ExcInternalError());
+    return {0, 0};
+  }
 
  private:
   // Struct for the individual terms:

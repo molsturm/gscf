@@ -127,15 +127,15 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    * Here we use the ScfStateBase in order to be able to use
    * states of potentially different state_type as well.
    */
-  template <
-        typename GuessState,
-        typename = krims::enable_if_t<std::is_base_of<
-              ScfStateBase<probmat_type, overlap_type, diagmat_type>, GuessState>::value>>
+  template <typename GuessState,
+            typename = krims::enable_if_t<
+                  std::is_base_of<ScfStateBase<probmat_type, overlap_type, diagmat_type>,
+                                  krims::remove_reference_t<GuessState>>::value>>
   state_type solve_with_guess(probmat_type probmat_bb, const overlap_type& overlap_bb,
-                              const GuessState& guess_state) const {
+                              GuessState&& guess_state) const {
     // Create a new state and install the guess state:
     state_type state{std::move(probmat_bb), overlap_bb};
-    state.obtain_guess_from(guess_state);
+    state.obtain_guess_from(std::forward<GuessState>(guess_state));
     this->solve_state(state);
     return state;
   }
@@ -145,14 +145,14 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    * Here we use the EigensolverStateBase in order to be able to use
    * states of potentially different state_type as well.
    */
-  template <
-        typename GuessState,
-        typename = krims::enable_if_t<std::is_base_of<
-              ScfStateBase<probmat_type, overlap_type, diagmat_type>, GuessState>::value>>
-  state_type solve_with_guess(const GuessState& guess_state) const {
+  template <typename GuessState,
+            typename = krims::enable_if_t<
+                  std::is_base_of<ScfStateBase<probmat_type, overlap_type, diagmat_type>,
+                                  krims::remove_reference_t<GuessState>>::value>>
+  state_type solve_with_guess(GuessState&& guess_state) const {
     // Create a new state and install the guess state:
     state_type state{guess_state.problem_matrix(), guess_state.overlap_matrix()};
-    state.obtain_guess_from(guess_state);
+    state.obtain_guess_from(std::forward<GuessState>(guess_state));
     this->solve_state(state);
     return state;
   }
@@ -294,7 +294,7 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
 
   try {
     solver.solve_state(state);
-    s.push_new_eigensolution(state.eigensolution(),
+    s.push_new_eigensolution(std::move(state.eigensolution()),
                              {state.n_iter(), state.n_mtx_applies()});
   } catch (const linalgwrap::SolverException& e) {
     linalgwrap::rescue::failed_eigenproblem(problem, eigensolver_params);

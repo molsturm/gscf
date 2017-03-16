@@ -166,17 +166,31 @@ class ScfStateBase
 
   /** \name Transfer a guess to this state */
   ///@{
-  /** Setup the guess of this state. from another state. */
+  /** Setup the guess of this state by copying from another state.
+   *
+   * Also updates the state of the problem matrix to the guess solution
+   * */
   template <typename DiagMat>
   void obtain_guess_from(const ScfStateBase<probmat_type, overlap_type, DiagMat>& other) {
-    m_eigensolution = other.eigensolution();
     m_prev_eigensolution = other.previous_eigensolution();
+    obtain_guess_from(other.eigensolution());
   }
 
-  /** Setup the guess of this state. from another eigensolution.
+  /** Setup the guess of this state by moving from another state.
    *
+   * Also updates the state of the problem matrix to the guess solution
+   * */
+  template <typename DiagMat>
+  void obtain_guess_from(ScfStateBase<probmat_type, overlap_type, DiagMat>&& other) {
+    m_prev_eigensolution = std::move(other.m_prev_eigensolution);
+    obtain_guess_from(std::move(other.m_eigensolution));
+  }
+
+  /** Setup the guess of this state by coping in another eigensolution.
+   *
+   * Also updates the state of the problem matrix to the guess solution
    */
-  void obtain_guess_from(const esoln_type& other_soln) { m_eigensolution = other_soln; }
+  void obtain_guess_from(esoln_type other_soln);
   ///@}
 
   /** \name Advanced access to matrix pointers
@@ -249,8 +263,19 @@ void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::
                              EigenproblemStatistics new_stats) {
   // If memory is really an issue one should have the option to bin the previous
   // eigensolution instead.
-  m_prev_eigensolution = m_eigensolution;
-  m_eigensolution = new_eigensolution;
+  m_prev_eigensolution = std::move(m_eigensolution);
+  m_eigensolution = std::move(new_eigensolution);
   m_eprob_stats = new_stats;
 }
+
+template <typename ProblemMatrix, typename OverlapMatrix, typename DiagonalisedMatrix>
+void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::obtain_guess_from(
+      esoln_type other_soln) {
+  m_eigensolution = std::move(other_soln);
+
+  // Update problem matrix with this solution
+  const std::string key = problem_matrix_ptr->scf_update_key();
+  problem_matrix_ptr->update({{key, m_eigensolution.evectors_ptr}});
+}
+
 }  // gscf

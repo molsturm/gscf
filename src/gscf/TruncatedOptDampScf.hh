@@ -140,6 +140,13 @@ class TruncatedOptDampScf : public ScfBase<ScfState> {
    *  expansion to determine the optimal damping factor */
   size_type n_prev_steps = 2;
 
+  /** Fock prefactor threshold. If the prefactor in front
+   *  of a Fock matrix becomes smaller than this value, than
+   *  this Fock matrix is entirely ignored in order to reduce
+   *  the number of matrix applies, which are performed.
+   */
+  real_type min_fock_prefactor = 0.05;
+
   /** Update control parameters from Parameter map */
   void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
@@ -190,6 +197,18 @@ class TruncatedOptDampScf : public ScfBase<ScfState> {
    *  have been obtained and before diagonalisation.
    */
   void update_oda_diagmat(state_type& s) const;
+
+ private:
+  /** Compute the new damping coefficient from the values of s and c,
+   * which we determined.
+   */
+  scalar_type compute_damping_coeff(scalar_type s, scalar_type c) const;
+
+  /** Compute the trace $\tr F^{(n-1)} P^{(n)}$, where n is the current
+   *  iteration count, i.e. s.problem_matrix() was built from the density
+   *  $P^{(n))$ and s.prev_problem_matrix_ptr points to $F^{(n-1)}$.
+   */
+  scalar_type trace_fprev_dcur(state_type& s) const;
 };
 
 //
@@ -214,7 +233,7 @@ void TruncatedOptDampScf<ScfState>::solve_state(state_type& state) const {
 
     // Update the matrix applies, noting that there are
     // various terms in the diagmat matrix we actually diagonalise
-    const size_t n_terms = state.prev_problem_matrix_ptr == nullptr ? 1ul : 2ul;
+    const size_t n_terms = state.damping_coeff == 1 ? 1ul : 2ul;
     state.n_mtx_applies() += n_terms * state.eigenproblem_stats().n_mtx_applies();
 
     // The ODA guess (stored in the diagonalised_matrix_ptr)
@@ -223,16 +242,22 @@ void TruncatedOptDampScf<ScfState>::solve_state(state_type& state) const {
     // we reset it at this stage
     state.diagonalised_matrix_ptr.reset();
 
-    // Purge the problem matrix with the smallest
-    // coefficient (lambda or (1-lambda) and update
-    // the damping coefficient accordingly.
-    if (state.damping_coeff > 0.5) {
-      state.prev_problem_matrix_ptr = state.problem_matrix_ptr;
-    } else {
-      state.damping_coeff = 1 - state.damping_coeff;
+    {
+      // Out of the two problem matrices we store keep the one which had the
+      // largest contribution in the diagonalised_matrix. This thing is most
+      // likely closer to the actual minimum.
+      //
+      // If we purge the more recent one, update the damping coefficient
+      // accordingly.
+      if (state.damping_coeff > 0.5) {
+        state.prev_problem_matrix_ptr = state.problem_matrix_ptr;
+      } else {
+        state.damping_coeff = 1 - state.damping_coeff;
+      }
     }
 
-    // Form the new problem matrix
+    // Form the next problem matrix from the eigensolution
+    // determined above
     base_type::update_problem_matrix(state);
 
     // Calculate the new error.
@@ -243,73 +268,75 @@ void TruncatedOptDampScf<ScfState>::solve_state(state_type& state) const {
 }
 
 template <typename ScfState>
+typename TruncatedOptDampScf<ScfState>::scalar_type
+TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
+  // The most recent eigensolution:
+  const auto& coeff_bf = s.eigensolution().evectors();
+  const auto& orben_f = s.eigensolution().evalues();
+
+  const auto& fp_bb = *s.prev_problem_matrix_ptr;
+  const krims::Range<size_t> occ_a = fp_bb.indices_subspace(OrbitalSpace::OCC_ALPHA);
+  const krims::Range<size_t> occ_b = fp_bb.indices_subspace(OrbitalSpace::OCC_BETA);
+
+  assert_greater(occ_a.length(), orben_f.size());
+  assert_greater(occ_b.length(), orben_f.size());
+  assert_sufficiently_tested(occ_a.length() == occ_b.length());
+
+  // In the special case where the damping coefficient is 1 the diagonalised
+  // matrix equals the previous problem matrix exactly. Therefore we do not need to
+  // perform the trace  and can just sum the eigenvalues of the occupied orbitals
+  // to get the trace $\tr F^{(n)} P^{(n+1)}$
+  if (s.damping_coeff == 1) {
+    // Compute sum of the occupied alpha orbital energies
+    const scalar_type sum_a =
+          std::accumulate(std::begin(orben_f) + occ_a.lower_bound(),
+                          std::begin(orben_f) + occ_a.upper_bound(), scalar_type(0));
+
+    // Either return twice this value or add the occupied beta orbital energies
+    return occ_a == occ_b
+                 ? 2. * sum_a
+                 : std::accumulate(std::begin(orben_f) + occ_b.lower_bound(),
+                                   std::begin(orben_f) + occ_b.upper_bound(), sum_a);
+  } else {
+    // TODO This is poor-mans multiplexing. I feel this should go once we have
+    //      block-diagonality in place.
+
+    // increase apply count
+    s.n_mtx_applies() += 1;
+
+    // Occupied coefficients (alpha)
+    const auto ca_bo = coeff_bf.subview(occ_a);
+
+    // Apply fock to occupied (alpha) orbitals
+    //     -- O(n_bas*n_bas*n_occ)
+    const auto Fca_bo = fp_bb * ca_bo;
+
+    // Form the outer product sum and trace it
+    //  -- O(n_bas*n_bas*n_occ)
+    const auto tr_aa = trace(outer_prod_sum(ca_bo, Fca_bo));
+
+    if (occ_a == occ_b) {
+      return 2. * tr_aa;
+    } else {
+      // Repeat the same in the beta blocks
+
+      const auto cb_bo = coeff_bf.subview(occ_b);
+      const auto Fcb_bo = fp_bb * coeff_bf.subview(occ_b);
+      const auto tr_bb = trace(outer_prod_sum(cb_bo, Fcb_bo));
+      return tr_aa + tr_bb;
+    }
+  }
+}
+
+template <typename ScfState>
 void TruncatedOptDampScf<ScfState>::update_damping_coefficients(state_type& s) const {
   if (s.prev_problem_matrix_ptr == nullptr) {
     s.damping_coeff = 1;
     return;
   }
 
-  // The value of the trace $\tr F^{(n)} P^{(n+1)}$
-  const scalar_type tr_cpc = [&s]() {
-    // Aliase
-    const auto& coeff_bf = s.eigensolution().evectors();
-    const auto& fock_bb = s.problem_matrix();
-    const auto& orben_f = s.eigensolution().evalues();
-
-    // The range of occupied alphas
-    const krims::Range<size_t> occ_a =
-          s.problem_matrix().indices_subspace(OrbitalSpace::OCC_ALPHA);
-    const krims::Range<size_t> occ_b =
-          s.problem_matrix().indices_subspace(OrbitalSpace::OCC_BETA);
-
-    // checks
-    assert_greater(occ_a.length(), orben_f.size());
-    assert_greater(occ_b.length(), orben_f.size());
-    assert_sufficiently_tested(occ_a.length() == occ_b.length());
-
-    // In the special case where the damping coefficient is 1 the diagonalised
-    // matrix equals the previous problem matrix exactly. Therefore we do not need to
-    // perform the trace in this special case and can just sum the eigenvalues of the
-    // occupied orbitals to get the trace $\tr F^{(n)} P^{(n+1)}$
-    if (s.damping_coeff == 1) {
-      // Compute sum of the occupied alpha orbital energies
-      const scalar_type sum_a =
-            std::accumulate(std::begin(orben_f) + occ_a.lower_bound(),
-                            std::begin(orben_f) + occ_a.upper_bound(), scalar_type(0));
-
-      // Either return twice this value or add the occupied beta orbital energies
-      return occ_a == occ_b
-                   ? 2. * sum_a
-                   : std::accumulate(std::begin(orben_f) + occ_b.lower_bound(),
-                                     std::begin(orben_f) + occ_b.upper_bound(), sum_a);
-    } else {
-      // TODO This is poor-mans multiplexing. I feel this should go once we have
-      // block-diagonality in place.
-      // TODO increase apply count
-
-      // Occupied coefficients (alpha)
-      const auto ca_bo = coeff_bf.subview(occ_a);
-
-      // Apply fock to occupied (alpha) orbitals
-      //     -- O(n_bas*n_bas*n_occ)
-      const auto Fca_bo = fock_bb * ca_bo;
-
-      // Form the outer product sum and trace it
-      //  -- O(n_bas*n_bas*n_occ)
-      const auto tr_aa = trace(outer_prod_sum(ca_bo, Fca_bo));
-
-      if (occ_a == occ_b) {
-        return 2. * tr_aa;
-      } else {
-        // Repeat the same in the beta blocks
-
-        const auto cb_bo = coeff_bf.subview(occ_b);
-        const auto Fcb_bo = fock_bb * coeff_bf.subview(occ_b);
-        const auto tr_bb = trace(outer_prod_sum(cb_bo, Fcb_bo));
-        return tr_aa + tr_bb;
-      }
-    }
-  }();
+  // The value of the trace $\tr F^{(n-1)} P^{(n)}$
+  const scalar_type tr_cpc = trace_fprev_dcur(s);
 
   // Compute s and c for the 2-step truncated ODA SCF
   const scalar_type oda_s = tr_cpc - s.prev_problem_matrix_ptr->energy_1e_terms() -
@@ -318,25 +345,34 @@ void TruncatedOptDampScf<ScfState>::update_damping_coefficients(state_type& s) c
                             s.problem_matrix().energy_2e_terms() +
                             s.prev_problem_matrix_ptr->energy_2e_terms();
 
-  // If the error in the SCF gets too small the numerics makes the values of oda_s and
-  // oda_c go mad.
-  // This catches the problematic cases and disables the ODA.
-  if (oda_s >= 0 || fabs(oda_s) < 1e-14 || fabs(oda_c) < 1e-14) {
-    s.damping_coeff = 1;
-    return;
-  }
+  s.damping_coeff = compute_damping_coeff(oda_s, oda_c);
+  if (s.damping_coeff == 1) s.prev_problem_matrix_ptr.reset();
+}
 
-  // Else set the damping coefficient:
-  s.damping_coeff = 2. * oda_c <= -oda_s ? 1 : -oda_s / (2 * oda_c);
-  assert_dbg(s.damping_coeff >= 0 && s.damping_coeff <= 1, krims::ExcInternalError());
+template <typename ScfState>
+typename TruncatedOptDampScf<ScfState>::scalar_type
+TruncatedOptDampScf<ScfState>::compute_damping_coeff(scalar_type oda_s,
+                                                     scalar_type oda_c) const {
+  // TODO Make threshold configurable
+  // If the error in the SCF gets too small the numerics makes the values of
+  // oda_s and oda_c go mad and it is not reliable to trust them at all.
+  const real_type ignore_threshold = 1e-14;
+  if (fabs(oda_s) < ignore_threshold || fabs(oda_c) < ignore_threshold) return 1;
 
-#ifdef DEBUG_TODA
-  // TODO temporary
-  std::cout << std::setprecision(16) << "oda s:     " << oda_s << std::endl;
-  std::cout << std::setprecision(16) << "oda c:     " << oda_c << std::endl;
-  std::cout << std::setprecision(16) << "ST damping:  " << s.damping_coeff
-            << std::setprecision(6) << std::endl;
-#endif
+  // Catch another frequent problem when numerical errors increase:
+  if (oda_s >= 0) return 1;
+
+  const scalar_type new_damping_coeff = 2. * oda_c <= -oda_s ? 1 : -oda_s / (2 * oda_c);
+  assert_dbg(new_damping_coeff >= 0 && new_damping_coeff <= 1, krims::ExcInternalError());
+
+  // Cap the value of the damping coefficient from below and above, such that
+  // no fock prefactor gets smaller than min_fock_prefactor.
+  // The rationale is that otherwise it's not worth doing two applies
+  // in the next diagonalisation.
+  if (new_damping_coeff < min_fock_prefactor) return min_fock_prefactor;
+  if (new_damping_coeff > 1 - min_fock_prefactor) return 1;
+
+  return new_damping_coeff;
 }
 
 template <typename ScfState>
@@ -344,7 +380,7 @@ void TruncatedOptDampScf<ScfState>::update_oda_diagmat(state_type& s) const {
   // Initialise an empty matrix for the tODA fock matrix guess in the state:
   s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>();
 
-  if (s.prev_problem_matrix_ptr == nullptr || s.damping_coeff == 1) {
+  if (s.prev_problem_matrix_ptr == nullptr) {
     (*s.diagonalised_matrix_ptr) += s.problem_matrix();
   } else {
     (*s.diagonalised_matrix_ptr) += (1. - s.damping_coeff) * (*s.prev_problem_matrix_ptr);

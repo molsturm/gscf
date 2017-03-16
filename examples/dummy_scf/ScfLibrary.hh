@@ -146,7 +146,7 @@ class DiisScfHartreeFock
     std::cout << std::endl;
   }
 
-  void on_new_diis_diagmat(state_type& s) const override {
+  void on_new_diagmat(state_type& s) const override {
     if (s.diis_coefficients.size() > 0) {
       std::cout << "   DIIS coefficients:   ";
       std::copy(s.diis_coefficients.begin(), s.diis_coefficients.end(),

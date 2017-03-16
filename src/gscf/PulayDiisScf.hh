@@ -182,7 +182,7 @@ class PulayDiisScf : public ScfBase<ScfState> {
    *
    * \note The guess can be obtained via state.diagonalised_matrix().
    * */
-  virtual void on_new_diis_diagmat(state_type&) const {}
+  virtual void on_new_diagmat(state_type&) const {}
   ///@}
 
   /** Compute the norm of the most recent entry (i.e. the back) of the
@@ -210,7 +210,7 @@ class PulayDiisScf : public ScfBase<ScfState> {
    *  DIIS guess for the self-consistent problem matrix.
    *  The result is stored inside diagonalised_matrix_ptr
    *
-   *  Then on_new_diis_diagmat is called.
+   *  Then on_new_diagmat is called.
    *
    *  \note This function is called once the new diis coefficients
    *  have been obtained and before diagonalisation.
@@ -393,6 +393,11 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
     // This is the first run and there are no coefficients:
     (*s.diagonalised_matrix_ptr) += s.problem_matrix();
   } else {
+    // TODO
+    // TODO Ignore Fock matrices where the coefficient is too small
+    // and add the coefficient value to the fock matrix which has the
+    // largest value already
+
     // Form linear combination according to coefficients:
     auto probmat_pit = std::begin(s.prev_problem_matrix_ptrs);
     size_t i = 0;
@@ -403,7 +408,7 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
     assert_dbg(i == s.diis_coefficients.size(), ExcInternalError());
   }
 
-  on_new_diis_diagmat(s);
+  on_new_diagmat(s);
 }
 
 template <typename ScfState>

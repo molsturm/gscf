@@ -4,6 +4,7 @@
 set(GSCF_SOURCES
 	ScfBaseKeys.cc
 	PulayDiisScfKeys.cc
+	TruncatedOptDampScfKeys.cc
 	version.cc
 )
 

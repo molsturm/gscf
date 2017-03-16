@@ -1,6 +1,7 @@
 #include <catch.hpp>
 #include <gscf/PlainScf.hh>
 #include <gscf/PulayDiisScf.hh>
+#include <gscf/TruncatedOptDampScf.hh>
 #include <gscfmock/FockMatrix.hh>
 #include <gscfmock/Integrals.hh>
 #include <gscfmock/pulay_error.hh>
@@ -55,6 +56,29 @@ class PulayDiisScf
 
   PulayDiisScf() : base_type() {}
   PulayDiisScf(const GenMap& map) : base_type(map) {}
+};
+
+template <typename FockType>
+class TruncatedOptDampScf
+      : public gscf::TruncatedOptDampScf<
+              TruncatedOptDampScfState<FockType, typename FockType::stored_matrix_type>> {
+ public:
+  typedef FockType fock_type;
+  typedef typename fock_type::stored_matrix_type matrix_type;
+  typedef gscf::TruncatedOptDampScf<TruncatedOptDampScfState<FockType, matrix_type>>
+        base_type;
+  typedef typename base_type::state_type state_type;
+
+  //! Define how we compute the error: Pulay error
+  matrix_type calculate_error(const state_type& s) const override {
+    const auto& fock_bb = s.problem_matrix();
+    const auto& coefficients_bf = s.eigensolution().evectors();
+    const auto& overlap_bb = s.overlap_matrix();
+    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+  }
+
+  TruncatedOptDampScf() : base_type() {}
+  TruncatedOptDampScf(const GenMap& map) : base_type(map) {}
 };
 
 }  // namespace error_wrapped_solvers
@@ -190,6 +214,35 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     CHECK(hf_energies.energy_total == numcomp(exp_energy_total).tolerance(basetol));
   }  // PulayDiisScf
 
+  SECTION("TruncatedOptDampScf") {
+    error_wrapped_solvers::TruncatedOptDampScf<decltype(fock)> scf(
+          {{"n_prev_steps", size_t(2)}});
+    auto res = scf.solve(fock, idata.s_bb());
+
+    CHECK(res.n_iter() < 13);
+
+    // Check the eigenvalues
+    const auto& evalues = res.eigensolution().evalues();
+    for (size_t i = 0; i < eval_expected.size(); ++i) {
+      CHECK(evalues[i] == numcomp(eval_expected[i]).tolerance(2. * basetol));
+    }
+
+    const auto& evectors = res.eigensolution().evectors();
+    // TODO For comparing all of them one needs to take rotations
+    //      inside degenerate subspaces into account
+    for (size_t i = 0; i < n_alpha; ++i) {
+      INFO("Comparing vector " + std::to_string(i));
+      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
+    }
+
+    // Check the energies:
+    auto hf_energies = res.problem_matrix().energies();
+    CHECK(hf_energies.energy_1e_terms == numcomp(exp_energy_1e_terms).tolerance(basetol));
+    CHECK(hf_energies.energy_coulomb == numcomp(exp_energy_coulomb).tolerance(basetol));
+    CHECK(hf_energies.energy_exchange == numcomp(exp_energy_exchange).tolerance(basetol));
+    CHECK(hf_energies.energy_total == numcomp(exp_energy_total).tolerance(basetol));
+  }  // TruncatedOptDampScf
 }  // TEST_CASE
 
 }  // namespace test

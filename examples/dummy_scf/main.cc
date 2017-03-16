@@ -22,15 +22,21 @@ using namespace gscfmock;
  * \param n_alpha Number of alpha electrons
  * \param n_beta  Number of beta electrons
  */
-void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
+void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
+                    std::string method) {
   // Define types for fock operator
   typedef IntegralsSturmian14 idata_type;
   typedef idata_type::scalar_type scalar_type;
   typedef FockMatrix<idata_type> fock_type;
 
+  std::cout << "##############################################\n"
+            << "#--  " << method << "  --#\n"
+            << "#####" << std::string(method.size(), '#') << "#####" << std::endl;
+
   // Output file for mathematica debug:
   std::stringstream filename;
-  filename << "/tmp/debug_gscf_scfdummy_" << Z << "_" << k_exp << "_sturm14.m";
+  filename << "/tmp/debug_gscf_scfdummy_" << method << "_" << Z << "_" << k_exp
+           << "_sturm14.m";
   std::ofstream mathematicafile(filename.str());
   auto debugout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica, scalar_type>(
         mathematicafile, 1e-5);
@@ -50,10 +56,19 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta) {
   debugout.write("guessfock", fock);
 
   // Allocate SCF objects:
-  // PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
-  DiisScfHartreeFock<decltype(fock)> scfhf(debugout);
-  scfhf.update_control_params({{"n_prev_steps", size_t(4)}});
-  scfhf.solve(fock, idata.s_bb());
+  if (method == "plain") {
+    PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
+    scfhf.solve(fock, idata.s_bb());
+  } else if (method == "diis") {
+    DiisScfHartreeFock<decltype(fock)> scfhf(debugout);
+    scfhf.n_prev_steps = 4;
+    scfhf.solve(fock, idata.s_bb());
+  } else if (method == "toda") {
+    TODAScfHartreeFock<decltype(fock)> scfhf(debugout);
+    scfhf.solve(fock, idata.s_bb());
+  }
+
+  std::cout << "##############################################" << std::endl;
 }
 }  // namespace dummy_scf
 
@@ -61,23 +76,16 @@ int main() {
   std::cout << "gscf version: " << gscf::version::version_string() << std::endl
             << "linalgwrap version: " << linalgwrap::version::version_string()
             << std::endl
+            << "We compute closed-shell Be atom using k_exp == 1.351" << std::endl
             << std::endl;
 
-  std::cout << "#" << std::endl;
-  std::cout << "# Closed-shell Be with k_exp = 1." << std::endl;
-  std::cout << "#" << std::endl;
   double Z = 4.;
-  double k_exp = 1.;
+  double k_exp = 1.351;
   size_t n_alpha = 2;
   size_t n_beta = 2;
-  dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta);
-
-  std::cout << std::endl << std::endl;
-  std::cout << "#" << std::endl;
-  std::cout << "# Closed-shell Be with k_exp = 1.351" << std::endl;
-  std::cout << "#" << std::endl;
-  k_exp = 1.351;
-  dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta);
+  for (const auto& method : std::array<std::string, 3>{{"plain", "diis", "toda"}}) {
+    dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta, method);
+  }
 
   return 0;
 }

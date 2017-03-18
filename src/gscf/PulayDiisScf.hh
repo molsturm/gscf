@@ -107,7 +107,7 @@ struct PulayDiisScfState
  *          Note that this map can be used to *select* an eigensolver as
  *          well.
  *   - n_prev_steps: The number of steps to consider in the DIIS.
- *                   (Default: 5)
+ *                   (Default: 4)
  *   - max_error_norm:  If the Frobenius norm of the most recent error
  *                      vector/matrix computed by ``calculate_error``
  *                      is below this value, we consider the iteration
@@ -150,8 +150,8 @@ class PulayDiisScf : public ScfBase<ScfState> {
 
   /** \name Iteration control */
   ///@{
-  //! The number of previous scf steps to consider
-  size_type n_prev_steps = 5;
+  //! The number of previous scf steps to consider in the DIIS
+  size_type n_prev_steps = 4;
 
   /** Update control parameters from Parameter map */
   void update_control_params(const krims::GenMap& map) {

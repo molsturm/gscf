@@ -159,9 +159,11 @@ class ScfStateBase
           m_eigensolution{},
           m_prev_eigensolution{} {
     // Check that we really get a hermitian matrix as we implicitly assume.
-    assert_dbg(problem_matrix_ptr->is_hermitian(), linalgwrap::ExcMatrixNotHermitian());
     // Note: This assumption is build into the update_eigenpairs method
     //       of ScfBase.
+    assert_dbg(problem_matrix_ptr->is_hermitian(
+                     100 * linalgwrap::Constants<real_type>::default_tolerance),
+               linalgwrap::ExcMatrixNotHermitian());
   }
 
   /** \name Transfer a guess to this state */
@@ -274,6 +276,10 @@ void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::obtain_gues
   m_eigensolution = std::move(other_soln);
 
   // Update problem matrix with this solution
+  assert_dbg(
+        m_eigensolution.evectors_ptr != nullptr &&
+              m_eigensolution.evectors().n_vectors() > 0,
+        krims::ExcInvalidState("Guess solution does not contain valid eigenvectors"));
   const std::string key = problem_matrix_ptr->scf_update_key();
   problem_matrix_ptr->update({{key, m_eigensolution.evectors_ptr}});
 }

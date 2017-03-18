@@ -29,6 +29,10 @@ struct TruncatedOptDampScfKeys : public ScfBaseKeys {
    *  damping SCF algorithm.
    *  Type: size_type */
   static const std::string n_prev_steps;
+
+  /** The smallest prefactor which may sit in front of a Fock matrix
+   *  for it to be considered at all (Type: scalar_type) */
+  static const std::string min_fock_prefactor;
 };
 
 }  // namespace gscf

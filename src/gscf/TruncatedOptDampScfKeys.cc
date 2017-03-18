@@ -22,5 +22,6 @@
 namespace gscf {
 
 const std::string TruncatedOptDampScfKeys::n_prev_steps = "n_prev_steps";
+const std::string TruncatedOptDampScfKeys::min_fock_prefactor = "toda_min_fock_prefactor";
 
 }  // namespace gscf

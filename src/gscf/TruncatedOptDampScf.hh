@@ -151,6 +151,8 @@ class TruncatedOptDampScf : public ScfBase<ScfState> {
   void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
     n_prev_steps = map.at(TruncatedOptDampScfKeys::n_prev_steps, n_prev_steps);
+    min_fock_prefactor =
+          map.at(TruncatedOptDampScfKeys::min_fock_prefactor, min_fock_prefactor);
   }
 
   /** Get the current settings of all internal control parameters and
@@ -159,6 +161,7 @@ class TruncatedOptDampScf : public ScfBase<ScfState> {
   void get_control_params(krims::GenMap& map) const {
     base_type::get_control_params(map);
     map.update(TruncatedOptDampScfKeys::n_prev_steps, n_prev_steps);
+    map.update(TruncatedOptDampScfKeys::min_fock_prefactor, min_fock_prefactor);
   }
   ///@}
 

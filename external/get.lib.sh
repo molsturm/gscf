@@ -31,7 +31,7 @@
 
 is_host_up() {
 	# Check whether the host is up
-	ping  -c 1 "$@" > /dev/null 2>&1
+	ping  -c 3 "$@" > /dev/null 2>&1
 }
 
 is_url_available() {

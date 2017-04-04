@@ -37,4 +37,5 @@ update_file "linalgwrap" "templates/hh.template" "keep_header" || exit 1
 update_file "linalgwrap" "templates/README.md" || exit 1
 
 update_file "krims" ".clang-format" || exit 1
+update_file "krims" ".clang-tidy" || exit 1
 update_file "linalgwrap" "update_from_sisters.lib.sh" || exit 1

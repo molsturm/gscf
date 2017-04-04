@@ -41,7 +41,10 @@ projects. Try to specify it manually using the variable EXTERNAL_DIR.")
 	endif()
 endif()
 
-function(include_krims_cmake_module MODULE)
+# NOTE: This has to be a macro otherwise it opens a new scope, which means
+#       that the variables set in teh included modules are *not* available
+#       to the outside scope!
+macro(include_krims_cmake_module MODULE)
 	# Sanity check
 	if(NOT EXISTS "${EXTERNAL_DIR}/get_krims.sh")
 		message(FATAL_ERROR "get_krims.sh does not exist in EXTERNAL_DIR \
@@ -50,33 +53,34 @@ function(include_krims_cmake_module MODULE)
 
 	# First try to load it plainly as a module:
 	include(${MODULE} OPTIONAL RESULT_VARIABLE RES)
-	if (NOT "${RES}" STREQUAL "NOTFOUND")
-		return()
+	if ("${RES}" STREQUAL "NOTFOUND")
+		# We could not "just" find it. Try the krims_DIR hint:
+		include("$ENV{krims_DIR}/share/cmake/modules/${MODULE}.cmake"
+			OPTIONAL RESULT_VARIABLE RES)
 	endif()
 
-	# We could not "just" find it. Try the krims_DIR hint:
-	include("$ENV{krims_DIR}/share/cmake/modules/${MODULE}.cmake"
-		OPTIONAL RESULT_VARIABLE RES)
-	if (NOT "${RES}" STREQUAL "NOTFOUND")
-		return()
-	endif()
-
-	# Try autocheckout
-	if (AUTOCHECKOUT_MISSING_REPOS)
-		execute_process(
-			COMMAND "sh" "get_krims.sh"
-			WORKING_DIRECTORY "${EXTERNAL_DIR}"
-			RESULT_VARIABLE RES
+	if ("${RES}" STREQUAL "NOTFOUND")
+		if (AUTOCHECKOUT_MISSING_REPOS)
+			# We could not include it with the hint => try autocheckout
+			execute_process(
+				COMMAND "sh" "get_krims.sh"
+				WORKING_DIRECTORY "${EXTERNAL_DIR}"
+				RESULT_VARIABLE RES
 			)
-		if (NOT RES EQUAL 0)
-			message(FATAL_ERROR "Getting krims from git failed with error: ${RES}")
+			if (NOT RES EQUAL 0)
+				message(FATAL_ERROR "Getting krims from git failed with error: ${RES}")
+			endif()
 		endif()
 
-		include("${EXTERNAL_DIR}/krims/cmake/modules/${MODULE}.cmake")
-		return()
+		include("${EXTERNAL_DIR}/krims/cmake/modules/${MODULE}.cmake"
+			OPTIONAL RESULT_VARIABLE RES)
 	endif()
 
-	message(FATAL_ERROR "Could not find the ${MODULE} module.
+	if ("${RES}" STREQUAL "NOTFOUND")
+		# We still could not find it.
+
+		message(FATAL_ERROR "Could not find the ${MODULE} module.
 Either provide the installation prefix of the krims library in the environment \
 variable krims_DIR or enable autocheckout via '-DAUTOCHECKOUT_MISSING_REPOS=ON'.")
-endfunction(include_krims_cmake_module)
+	endif()
+endmacro(include_krims_cmake_module)

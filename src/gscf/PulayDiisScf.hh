@@ -371,9 +371,7 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
     // TODO more clever way to do this?
     s.diis_coefficients = vector_type(std::begin(x), std::next(std::begin(x), n_errors));
   } catch (const linalgwrap::SolverException& e) {
-    std::stringstream ss;
-    e.print_extra(ss);
-    solver_assert(false, s, ExcDiisStepFailed(ss.str()));
+    solver_assert(false, s, ExcDiisStepFailed(e.extra()));
   }
 }
 

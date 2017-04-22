@@ -2,7 +2,7 @@
 
 A library of algorithms for solving *non-linear generalised eigenproblems*
 as they frequently occur when finding a *self-consistent field* (SCF) solution
-to a differential equation in theoretical Physics or Chemistry.
+to a partial differential equation in theoretical Physics or Chemistry.
 
 At the moment the major application of the code is electronic structure theory,
 more precisely solving the
@@ -19,7 +19,7 @@ Hence the name ``gscf`` for **g**eneralised **SCF**.
 - [linalgwrap](https://linalgwrap.org/) as a flexible linear algebra backend.
   ``linalgwrap`` has further dependencies in order to perform the
   linear algebra.
-  See their [README.md](https://github.com/linalgwrap/linalgwrap/README.md) for details.
+  See [github.com/linalgwrap/linalgwrap](https://github.com/linalgwrap/linalgwrap/blob/master/README.md) for details.
 
 Testing ``gscf`` further requires
 - [Catch](https://github.com/philsquared/Catch/) for the testing environment
@@ -60,9 +60,9 @@ cmake --build .
 ## Short description of ``gscf``
 In ``gscf`` we wish to solve a nonlinear SCF problem like
 ```
-A(l,x) x = l x
+A(v,x) x = v x
 ```
-where ``A`` is a matrix depending on its own eigenvalues ``l`` and
+where ``A`` is a matrix depending on its own eigenvalues ``v`` and
 eigenvectors ``x`` implicitly.  
 
 The following SCF algorithms are currently implemented for this task:

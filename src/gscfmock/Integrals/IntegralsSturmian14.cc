@@ -21,7 +21,7 @@
 
 namespace gscfmock {
 /* clang-format off */
-const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_t_bb_base{
+const matrix_type IntegralsSturmian14::m_t_bb_base{
       {0.5, 0.25, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
       {0.25, 0.5, 0., 0., 0., 0.25, 0., 0., 0., 0., 0., 0., 0., 0.},
       {0., 0., 0.5, 0., 0., 0., 0.20412414523193154, 0., 0., 0., 0., 0., 0., 0.},
@@ -37,7 +37,7 @@ const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_t_bb_base
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.5, 0.},
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.5}};
 
-const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_s_bb{
+const matrix_type IntegralsSturmian14::m_s_bb{
       {1., -0.5, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
       {-0.5, 1., 0., 0., 0., -0.5, 0., 0., 0., 0., 0., 0., 0., 0.},
       {0., 0., 1., 0., 0., 0., -0.4082482904638631, 0., 0., 0., 0., 0., 0., 0.},
@@ -53,7 +53,7 @@ const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_s_bb{
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.},
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.}};
 
-const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_v0_bb_base{
+const matrix_type IntegralsSturmian14::m_v0_bb_base{
       {1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
       {0., 0.5, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
       {0., 0., 0.5, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.},
@@ -69,7 +69,7 @@ const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_v0_bb_bas
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.3333333333333333, 0.},
       {0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.3333333333333333}};
 
-const typename IntegralsSturmian14::matrix_type IntegralsSturmian14::m_i_bbbb_base{
+const matrix_type IntegralsSturmian14::m_i_bbbb_base{
       {0.625, -0.15625, 0., 0., 0., -0.0625, 0., 0., 0., 0., 0., 0., 0., 
        0., -0.15625, 0.375, 0., 0., 0., -0.078125, 0., 0., 0., 0., 0., 0., 0., 
        0., 0., 0., 0.4375, 0., 0., 0., -0.04465215676948502, 0., 0., 0., 0., 0., 

@@ -23,8 +23,9 @@
 drb_add_library(gscfmock
 	DBGSUFFIX  ".g"
 	FILES
-	#
 	Integrals/IntegralsSturmian14.cc
+	FockMatrix.cc
+	pulay_error.cc
 )
 
 drb_set_target_properties(

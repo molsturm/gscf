@@ -26,14 +26,9 @@
 #include <gscf/version.hh>
 #include <gscfmock/FockMatrix.hh>
 #include <gscfmock/Integrals.hh>
-#include <linalgwrap/io.hh>
 #include <linalgwrap/version.hh>
 
 namespace dummy_scf {
-using namespace gscf;
-using namespace linalgwrap;
-using namespace gscfmock;
-
 /** Run an (atomic) SCF based on the integral data Sturmian14.
  *
  * \param Z       Number of nuclei
@@ -43,10 +38,8 @@ using namespace gscfmock;
  */
 void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
                     std::string method) {
-  // Define types for fock operator
-  typedef IntegralsSturmian14 idata_type;
-  typedef idata_type::scalar_type scalar_type;
-  typedef FockMatrix<idata_type> fock_type;
+  using gscfmock::IntegralsSturmian14;
+  using gscfmock::FockMatrix;
 
   std::cout << "##############################################\n"
             << "#--  " << method << "  --#\n"
@@ -60,31 +53,26 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
   auto debugout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica, scalar_type>(
         mathematicafile, 1e-5);
 
-  // Define integral data:
-  idata_type idata(Z, k_exp);
-
-  // Write sbb to debug:
-  debugout.write("sbb", idata.s_bb());
-
-  // Use a Löwdin orthogonalised guess for now:
+  // Define integral data and obtain a guess
+  IntegralsSturmian14 idata(Z, k_exp);
   auto guess = loewdin_guess(idata.s_bb());
+
+  // Write Sbb and guess to debug:
+  debugout.write("sbb", idata.s_bb());
   debugout.write("guess", guess);
 
+  // Setup Fock
   bool store_terms = true;
-  fock_type fock{n_alpha, n_beta, idata, guess, store_terms};
+  FockMatrix fock{n_alpha, n_beta, idata, guess, store_terms};
   debugout.write("guessfock", fock);
 
-  // Allocate SCF objects:
+  // Solve SCF
   if (method == "plain") {
-    PlainScfHartreeFock<decltype(fock)> scfhf(debugout);
-    scfhf.solve(fock, idata.s_bb());
+    PlainScfHartreeFock{debugout}.solve(fock, idata.s_bb());
   } else if (method == "diis") {
-    DiisScfHartreeFock<decltype(fock)> scfhf(debugout);
-    scfhf.n_prev_steps = 4;
-    scfhf.solve(fock, idata.s_bb());
+    DiisScfHartreeFock{debugout}.solve(fock, idata.s_bb());
   } else if (method == "toda") {
-    TODAScfHartreeFock<decltype(fock)> scfhf(debugout);
-    scfhf.solve(fock, idata.s_bb());
+    TODAScfHartreeFock{debugout}.solve(fock, idata.s_bb());
   }
 
   std::cout << "##############################################" << std::endl;
@@ -92,17 +80,18 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
 }  // namespace dummy_scf
 
 int main() {
-  std::cout << "gscf version: " << gscf::version::version_string() << std::endl
-            << "linalgwrap version: " << linalgwrap::version::version_string()
-            << std::endl
-            << "We compute closed-shell Be atom using k_exp == 1.351" << std::endl
-            << std::endl;
-
   double Z = 4.;
   double k_exp = 1.351;
   size_t n_alpha = 2;
   size_t n_beta = 2;
-  for (const auto& method : std::array<std::string, 3>{{"plain", "diis", "toda"}}) {
+
+  std::cout << "gscf version: " << gscf::version::version_string() << std::endl
+            << "linalgwrap version: " << linalgwrap::version::version_string()
+            << std::endl
+            << "We compute closed-shell Be atom using k_exp == " << k_exp << std::endl
+            << std::endl;
+
+  for (const auto& method : {"plain", "diis", "toda"}) {
     dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta, method);
   }
 

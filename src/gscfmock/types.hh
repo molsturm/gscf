@@ -18,15 +18,17 @@
 //
 
 #pragma once
-#include "types.hh"
+#include <linalgwrap/SmallMatrix.hh>
 
 namespace gscfmock {
 
-class FockMatrix;
+/** The scalar type to use in gscfmock */
+typedef double scalar_type;
 
-//! Compute the Pulay error
-matrix_type pulay_error(const FockMatrix& fock_bb,
-                        const linalgwrap::MultiVector<const vector_type>& coefficients_bf,
-                        const matrix_type& overlap_bb);
+/** The stored matrix type to use in gscfmock */
+typedef linalgwrap::SmallMatrix<scalar_type> matrix_type;
 
-}  // namespace gscfmock
+/** The vector type to use in gscfmock */
+typedef typename matrix_type::vector_type vector_type;
+
+}  // namespace gscf

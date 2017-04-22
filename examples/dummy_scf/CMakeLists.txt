@@ -23,7 +23,7 @@
 # The sources for this example executable
 #
 # Compile and link:
-add_executable(dummy_scf main.cc)
+add_executable(dummy_scf loewdin_guess.cc main.cc)
 
 set_target_properties(
 	dummy_scf

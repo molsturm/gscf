@@ -23,86 +23,20 @@
 #include <gscf/TruncatedOptDampScf.hh>
 #include <gscfmock/FockMatrix.hh>
 #include <gscfmock/Integrals.hh>
-#include <gscfmock/pulay_error.hh>
+#include <gscfmock/error_wrapped_solvers.hh>
 #include <linalgwrap/TestingUtils.hh>
 
 namespace gscf {
 namespace tests {
-using namespace gscf;
 using namespace linalgwrap;
 using namespace krims;
-using namespace gscfmock;
-
-namespace error_wrapped_solvers {
-
-template <typename FockType>
-class PlainScf : public gscf::PlainScf<
-                       PlainScfState<FockType, typename FockType::stored_matrix_type>> {
- public:
-  typedef FockType fock_type;
-  typedef typename FockType::stored_matrix_type matrix_type;
-  typedef gscf::PlainScf<PlainScfState<FockType, matrix_type>> base_type;
-  typedef typename base_type::state_type state_type;
-
-  PlainScf() : base_type() {}
-  PlainScf(const GenMap& map) : base_type(map) {}
-
-  matrix_type calculate_error(const state_type& s) const override {
-    const auto& fock_bb = s.problem_matrix();
-    const auto& coefficients_bf = s.eigensolution().evectors();
-    const auto& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
-  }
-};
-
-template <typename FockType>
-class PulayDiisScf
-      : public gscf::PulayDiisScf<
-              PulayDiisScfState<FockType, typename FockType::stored_matrix_type>> {
- public:
-  typedef FockType fock_type;
-  typedef typename fock_type::stored_matrix_type matrix_type;
-  typedef gscf::PulayDiisScf<PulayDiisScfState<FockType, matrix_type>> base_type;
-  typedef typename base_type::state_type state_type;
-
-  //! Define how we compute the error: Pulay error
-  matrix_type calculate_error(const state_type& s) const override {
-    const auto& fock_bb = s.problem_matrix();
-    const auto& coefficients_bf = s.eigensolution().evectors();
-    const auto& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
-  }
-
-  PulayDiisScf() : base_type() {}
-  PulayDiisScf(const GenMap& map) : base_type(map) {}
-};
-
-template <typename FockType>
-class TruncatedOptDampScf
-      : public gscf::TruncatedOptDampScf<
-              TruncatedOptDampScfState<FockType, typename FockType::stored_matrix_type>> {
- public:
-  typedef FockType fock_type;
-  typedef typename fock_type::stored_matrix_type matrix_type;
-  typedef gscf::TruncatedOptDampScf<TruncatedOptDampScfState<FockType, matrix_type>>
-        base_type;
-  typedef typename base_type::state_type state_type;
-
-  //! Define how we compute the error: Pulay error
-  matrix_type calculate_error(const state_type& s) const override {
-    const auto& fock_bb = s.problem_matrix();
-    const auto& coefficients_bf = s.eigensolution().evectors();
-    const auto& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
-  }
-
-  TruncatedOptDampScf() : base_type() {}
-  TruncatedOptDampScf(const GenMap& map) : base_type(map) {}
-};
-
-}  // namespace error_wrapped_solvers
 
 TEST_CASE("SCF functionality test", "[SCF functionality]") {
+  // Use the matrix, vector and scalar types from gscfmock
+  using gscfmock::scalar_type;
+  using gscfmock::vector_type;
+  using gscfmock::matrix_type;
+
   // The test problem
   double Z = 4.;  // Be atom
   double k_exp = 1.;
@@ -110,11 +44,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   size_t n_beta = 2;
 
   // Setup integral data
-  typedef IntegralsSturmian14 idata_type;
-  typedef typename idata_type::matrix_type matrix_type;
-  typedef typename idata_type::scalar_type scalar_type;
-  typedef typename matrix_type::vector_type vector_type;
-  idata_type idata(Z, k_exp);
+  gscfmock::IntegralsSturmian14 idata(Z, k_exp);
 
   // The guess to use ... we could use something
   // random here
@@ -127,7 +57,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   guess[3](4) = guess[3](8) = -0.9192110607898044;
 
   // The initial fock matrix
-  FockMatrix<decltype(idata)> fock(n_alpha, n_beta, idata, guess);
+  gscfmock::FockMatrix fock(n_alpha, n_beta, idata, guess);
 
   // The expected eigenvalues
   std::vector<scalar_type> eval_expected{
@@ -176,7 +106,8 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   const double basetol = 5e-7;
 
   SECTION("PlainSCF") {
-    error_wrapped_solvers::PlainScf<decltype(fock)> scf;
+    // The plain SCF solver with the Pulay error to check for convergence
+    gscfmock::error_wrapped_solvers::PlainScf scf;
     auto res = scf.solve(fock, idata.s_bb());
 
     CHECK(res.n_iter() < 15);
@@ -204,8 +135,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   }  // PlainSCF
 
   SECTION("PulayDiisScf") {
-    error_wrapped_solvers::PulayDiisScf<decltype(fock)> scf(
-          {{"n_prev_steps", size_t(4)}});
+    gscfmock::error_wrapped_solvers::PulayDiisScf scf({{"n_prev_steps", size_t(4)}});
     auto res = scf.solve(fock, idata.s_bb());
 
     CHECK(res.n_iter() < 8);
@@ -234,7 +164,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   }  // PulayDiisScf
 
   SECTION("TruncatedOptDampScf") {
-    error_wrapped_solvers::TruncatedOptDampScf<decltype(fock)> scf(
+    gscfmock::error_wrapped_solvers::TruncatedOptDampScf scf(
           {{"n_prev_steps", size_t(2)}});
     auto res = scf.solve(fock, idata.s_bb());
 

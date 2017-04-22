@@ -21,6 +21,7 @@
 #include <gscf/PlainScf.hh>
 #include <gscf/PulayDiisScf.hh>
 #include <gscf/TruncatedOptDampScf.hh>
+#include <gscfmock/FockMatrix.hh>
 #include <gscfmock/pulay_error.hh>
 #include <iostream>
 #include <iterator>
@@ -31,18 +32,8 @@ using namespace gscf;
 using namespace linalgwrap;
 using namespace gscfmock;
 
-template <typename FockType>
-class PlainScfHartreeFock
-      : public PlainScf<PlainScfState<FockType, typename FockType::stored_matrix_type>> {
+class PlainScfHartreeFock : public PlainScf<PlainScfState<FockMatrix, matrix_type>> {
  public:
-  typedef FockType fock_type;
-  typedef PlainScf<PlainScfState<FockType, typename FockType::stored_matrix_type>>
-        base_type;
-  typedef typename base_type::matrix_type matrix_type;
-  typedef typename matrix_type::vector_type vector_type;
-  typedef typename base_type::scalar_type scalar_type;
-  typedef typename base_type::state_type state_type;
-
   //
   // Constructor
   // TODO not the way we would do it now
@@ -52,10 +43,8 @@ class PlainScfHartreeFock
 
  protected:
   matrix_type calculate_error(const state_type& s) const override {
-    const auto& fock_bb = s.problem_matrix();
-    const auto& coefficients_bf = s.eigensolution().evectors();
-    const auto& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+    return pulay_error(s.problem_matrix(), s.eigensolution().evectors(),
+                       s.overlap_matrix());
   }
 
   void before_iteration_step(state_type& s) const override {
@@ -81,10 +70,8 @@ class PlainScfHartreeFock
   }
 
   void on_update_problem_matrix(state_type& s) const override {
-    typedef typename fock_type::energies_type energies_type;
-
     auto error = calculate_error(s);
-    energies_type hf_energies = s.problem_matrix().energies();
+    auto hf_energies = s.problem_matrix().energies();
 
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
@@ -119,29 +106,16 @@ class PlainScfHartreeFock
   linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
 };
 
-template <typename FockType>
 class DiisScfHartreeFock
-      : public PulayDiisScf<
-              PulayDiisScfState<FockType, typename FockType::stored_matrix_type>> {
+      : public PulayDiisScf<PulayDiisScfState<FockMatrix, matrix_type>> {
  public:
-  typedef FockType fock_type;
-  typedef PulayDiisScf<PulayDiisScfState<FockType, typename FockType::stored_matrix_type>>
-        base_type;
-  typedef typename base_type::size_type size_type;
-  typedef typename base_type::scalar_type scalar_type;
-  typedef typename base_type::matrix_type matrix_type;
-  typedef typename base_type::vector_type vector_type;
-  typedef typename base_type::state_type state_type;
-
   DiisScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
  protected:
   matrix_type calculate_error(const state_type& s) const override {
-    const fock_type& fock_bb = s.problem_matrix();
-    const MultiVector<vector_type>& coefficients_bf = s.eigensolution().evectors();
-    const matrix_type& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+    return pulay_error(s.problem_matrix(), s.eigensolution().evectors(),
+                       s.overlap_matrix());
   }
 
   void before_iteration_step(state_type& s) const override {
@@ -180,10 +154,7 @@ class DiisScfHartreeFock
   }
 
   void on_update_problem_matrix(state_type& s) const override {
-    typedef typename fock_type::energies_type energies_type;
-
-    energies_type hf_energies = s.problem_matrix().energies();
-
+    auto hf_energies = s.problem_matrix().energies();
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
@@ -216,37 +187,23 @@ class DiisScfHartreeFock
               << std::endl;
     m_writer.write("diiserror" + std::to_string(s.n_iter()), s.errors.back());
     m_writer.write("diislinsysmat" + std::to_string(s.n_iter()),
-                   base_type::diis_linear_system_matrix(s));
+                   diis_linear_system_matrix(s));
   }
 
  private:
   linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
 };
 
-template <typename FockType>
 class TODAScfHartreeFock
-      : public TruncatedOptDampScf<
-              TruncatedOptDampScfState<FockType, typename FockType::stored_matrix_type>> {
+      : public TruncatedOptDampScf<TruncatedOptDampScfState<FockMatrix, matrix_type>> {
  public:
-  typedef FockType fock_type;
-  typedef TruncatedOptDampScf<
-        TruncatedOptDampScfState<FockType, typename FockType::stored_matrix_type>>
-        base_type;
-  typedef typename base_type::size_type size_type;
-  typedef typename base_type::scalar_type scalar_type;
-  typedef typename base_type::matrix_type matrix_type;
-  typedef typename base_type::vector_type vector_type;
-  typedef typename base_type::state_type state_type;
-
   TODAScfHartreeFock(linalgwrap::io::DataWriter_i<scalar_type>& writer)
         : m_writer(writer) {}
 
  protected:
   matrix_type calculate_error(const state_type& s) const override {
-    const fock_type& fock_bb = s.problem_matrix();
-    const MultiVector<vector_type>& coefficients_bf = s.eigensolution().evectors();
-    const matrix_type& overlap_bb = s.overlap_matrix();
-    return pulay_error(fock_bb, coefficients_bf, overlap_bb);
+    return pulay_error(s.problem_matrix(), s.eigensolution().evectors(),
+                       s.overlap_matrix());
   }
 
   void before_iteration_step(state_type& s) const override {
@@ -282,10 +239,7 @@ class TODAScfHartreeFock
   }
 
   void on_update_problem_matrix(state_type& s) const override {
-    typedef typename fock_type::energies_type energies_type;
-
-    energies_type hf_energies = s.problem_matrix().energies();
-
+    auto hf_energies = s.problem_matrix().energies();
     auto n_iter = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 

@@ -23,10 +23,13 @@
 # The sources for this example executable
 #
 # Compile and link:
-add_executable(dummy_scf loewdin_guess.cc main.cc)
+add_executable(hartree_fock
+	loewdin_guess.cc
+	main.cc
+)
 
 set_target_properties(
-	dummy_scf
+	hartree_fock
 	PROPERTIES
 	LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS_${EXAMPLES_BUILD_TYPE}}" #${CMAKE_EXE_LINKER_FLAGS} are added
 	LINKER_LANGUAGE "CXX"
@@ -35,10 +38,10 @@ set_target_properties(
 )
 
 # setup definitions.
-target_compile_definitions(dummy_scf PRIVATE "${GSCF_DEFINITIONS};${GSCF_DEFINITIONS_${EXAMPLES_BUILD_TYPE}}")
+target_compile_definitions(hartree_fock PRIVATE "${GSCF_DEFINITIONS};${GSCF_DEFINITIONS_${EXAMPLES_BUILD_TYPE}}")
 
 # link it with the appropriate gscf and gscfmock library target
-target_link_libraries(dummy_scf
+target_link_libraries(hartree_fock
 	${gscf_${EXAMPLES_BUILD_TYPE}_TARGET}
 	${gscfmock_${EXAMPLES_BUILD_TYPE}_TARGET}
 	${GSCF_DEPENDENCIES}

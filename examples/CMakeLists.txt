@@ -27,4 +27,4 @@ else()
 endif()
 
 # Include subdirectories:
-add_subdirectory(dummy_scf)
+add_subdirectory(hartree_fock)

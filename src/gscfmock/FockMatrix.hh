@@ -104,18 +104,18 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
    * \param store_hf_terms   Should the HF terms be stored
    *                         (exchange matrix, coulomb matrix, ...)
    */
-  FockMatrix(size_type n_alpha, size_type n_beta, const IntegralDataBase& integral_data,
+  FockMatrix(size_t n_alpha, size_t n_beta, const IntegralDataBase& integral_data,
              const linalgwrap::MultiVector<vector_type>& initial_guess_bf,
              bool store_hf_terms = false);
 
   /** Return the number of rows of the matrix */
-  size_type n_rows() const override { return m_fock_ptr->n_rows(); }
+  size_t n_rows() const override { return m_fock_ptr->n_rows(); }
 
   /** Return the number of columns of the matrix */
-  size_type n_cols() const override { return m_fock_ptr->n_cols(); }
+  size_t n_cols() const override { return m_fock_ptr->n_cols(); }
 
   /** Return an element of the matrix */
-  scalar_type operator()(size_type row, size_type col) const override {
+  scalar_type operator()(size_t row, size_t col) const override {
     assert_greater(row, n_rows());
     assert_greater(col, n_cols());
     return (*m_fock_ptr)(row, col);
@@ -210,10 +210,10 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
   void build_fock_matrix_from_density(stored_matrix_type pa_bb, stored_matrix_type pb_bb);
 
   /** Number of alpha electrons */
-  size_type m_n_alpha;
+  size_t m_n_alpha;
 
   /** Number of beta electrons */
-  size_type m_n_beta;
+  size_t m_n_beta;
 
   //! The integral data
   krims::SubscriptionPointer<const IntegralDataBase> m_idata_ptr;

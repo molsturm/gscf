@@ -31,13 +31,13 @@
 namespace dummy_scf {
 /** Run an (atomic) SCF based on the integral data Sturmian14.
  *
- * \param Z       Number of nuclei
- * \param k_exp   Sturmian exponent
- * \param n_alpha Number of alpha electrons
- * \param n_beta  Number of beta electrons
+ * \param nuc_charge   Nuclear charge
+ * \param k_exp        Sturmian exponent
+ * \param n_alpha      Number of alpha electrons
+ * \param n_beta       Number of beta electrons
  */
-void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
-                    std::string method) {
+void run_sturmian14(double nuc_charge, double k_exp, size_t n_alpha, size_t n_beta,
+                    const std::string& method) {
   using gscfmock::IntegralsSturmian14;
   using gscfmock::FockMatrix;
 
@@ -47,14 +47,14 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
 
   // Output file for mathematica debug:
   std::stringstream filename;
-  filename << "/tmp/debug_gscf_scfdummy_" << method << "_" << Z << "_" << k_exp
+  filename << "/tmp/debug_gscf_scfdummy_" << method << "_" << nuc_charge << "_" << k_exp
            << "_sturm14.m";
   std::ofstream mathematicafile(filename.str());
   auto debugout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica, scalar_type>(
         mathematicafile, 1e-5);
 
   // Define integral data and obtain a guess
-  IntegralsSturmian14 idata(Z, k_exp);
+  IntegralsSturmian14 idata(nuc_charge, k_exp);
   auto guess = loewdin_guess(idata.s_bb());
 
   // Write Sbb and guess to debug:
@@ -80,19 +80,21 @@ void run_sturmian14(double Z, double k_exp, size_t n_alpha, size_t n_beta,
 }  // namespace dummy_scf
 
 int main() {
-  double Z = 4.;
-  double k_exp = 1.351;
-  size_t n_alpha = 2;
-  size_t n_beta = 2;
+  const std::string atom = "Be";
+  const double k_exp = 1.351;
+  const size_t nuc_charge = 4.;
+  const size_t n_alpha = nuc_charge / 2;
+  const size_t n_beta = nuc_charge / 2;
 
   std::cout << "gscf version: " << gscf::version::version_string() << std::endl
             << "linalgwrap version: " << linalgwrap::version::version_string()
             << std::endl
-            << "We compute closed-shell Be atom using k_exp == " << k_exp << std::endl
+            << "We compute closed-shell " << atom << " atom using k_exp == " << k_exp
+            << std::endl
             << std::endl;
 
   for (const auto& method : {"plain", "diis", "toda"}) {
-    dummy_scf::run_sturmian14(Z, k_exp, n_alpha, n_beta, method);
+    dummy_scf::run_sturmian14(nuc_charge, k_exp, n_alpha, n_beta, method);
   }
 
   return 0;

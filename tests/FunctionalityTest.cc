@@ -38,13 +38,13 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   using gscfmock::matrix_type;
 
   // The test problem
-  double Z = 4.;  // Be atom
+  double z_charge = 4.;  // Be atom
   double k_exp = 1.;
   size_t n_alpha = 2;
   size_t n_beta = 2;
 
   // Setup integral data
-  gscfmock::IntegralsSturmian14 idata(Z, k_exp);
+  gscfmock::IntegralsSturmian14 idata(z_charge, k_exp);
 
   // The guess to use ... we could use something
   // random here
@@ -194,5 +194,5 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
   }  // TruncatedOptDampScf
 }  // TEST_CASE
 
-}  // namespace test
+}  // namespace tests
 }  // namespace gscf

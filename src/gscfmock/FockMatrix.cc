@@ -39,9 +39,9 @@ krims::Range<size_t> FockMatrix::indices_subspace(gscf::OrbitalSpace osp) const 
   return {0, 0};
 }
 
-FockMatrix::FockMatrix(size_type n_alpha, size_type n_beta,
+FockMatrix::FockMatrix(size_t n_alpha, size_t n_beta,
                        const IntegralDataBase& integral_data,
-                       const linalgwrap::MultiVector<vector_type>& initial_guess,
+                       const linalgwrap::MultiVector<vector_type>& initial_guess_bf,
                        bool store_hf_terms)
       : m_n_alpha{n_alpha},
         m_n_beta{n_beta},
@@ -49,8 +49,9 @@ FockMatrix::FockMatrix(size_type n_alpha, size_type n_beta,
         m_fock_ptr(std::make_shared<matrix_type>(integral_data.nbas(),
                                                  integral_data.nbas(), false)),
         m_store_hf_terms{store_hf_terms},
-        m_terms_ptr{nullptr} {
-  build_fock_matrix_from_coefficient(initial_guess);
+        m_terms_ptr{nullptr},
+        m_energies{} {
+  build_fock_matrix_from_coefficient(initial_guess_bf);
 }
 
 void FockMatrix::calc_coulomb(const matrix_type& density_bb, matrix_type& coul_bb) const {

@@ -35,14 +35,14 @@ matrix_type pulay_error(const FockMatrix& fock_bb,
   auto ca_bo = coefficients_bf.subview(occ_a);
 
   // Form first products (Factor of 2 since alpha == beta)
-  auto Sca_bo = 2. * overlap_bb * ca_bo;
-  auto Fca_bo = fock_bb * ca_bo;
+  auto sca_bo = 2. * overlap_bb * ca_bo;
+  auto fca_bo = fock_bb * ca_bo;
 
   // Form the antisymmetric outer product and return it.
   // The idea is
   // S * P * F - F * P * S == S * C * C^T * F - F * C * C^T * S
   //                       == (S*C) * (F*C)^T - (F*C) * (S*C)^T
-  return outer_prod_sum(Sca_bo, Fca_bo) - outer_prod_sum(Fca_bo, Sca_bo);
+  return outer_prod_sum(sca_bo, fca_bo) - outer_prod_sum(fca_bo, sca_bo);
 }
 
 }  // namespace gscfmock

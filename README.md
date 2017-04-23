@@ -1,5 +1,6 @@
 # gscf
 [![Build Status](https://travis-ci.org/molsturm/gscf.svg?branch=master)](https://travis-ci.org/molsturm/gscf)
+[![Coverage Status](https://coveralls.io/repos/github/molsturm/gscf/badge.svg?branch=master)](https://coveralls.io/github/molsturm/gscf)
 [![Licence](https://img.shields.io/github/license/molsturm/gscf.svg)](LICENCE)
 
 A library of algorithms for solving *non-linear generalised eigenproblems*

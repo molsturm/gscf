@@ -34,8 +34,14 @@ env:
     # Use two threads in parallel
     - CORES=2
     #
+    # Use a known-to-work rapidcheck seed
+    #- RC_PARAMS="seed=16920708173099178154 verbose_progress=1 noshrink=1"
+    #
     # The regex for tests to run (disable running tests by TESTS=0)
     - TESTS=1  TESTS_REGEX="gscf_tests_"
+
+before_install:
+    - travis_retry pip install --user cpp-coveralls
 
 addons:
   apt:
@@ -57,12 +63,14 @@ matrix:
     - install:
       - travis_retry sudo apt-get install -y libstdc++-4.9-dev
       - export EXTRA_OPTS="-DDRB_MAXIMUM_CXX_STANDARD=11"
+      - export GCOV="llvm-cov gcov"
       compiler: clang
       env: CC_COMP="clang" CXX_COMP="clang++"
     #
     # Clang 3.9 (has c++14)
     - install:
       - travis_retry sudo apt-get install -y clang-3.9 libstdc++-4.9-dev
+      - export GCOV="llvm-cov-3.9 gcov"
       compiler: clang
       env: CC_COMP="clang-3.9" CXX_COMP="clang++-3.9"
     #
@@ -75,6 +83,7 @@ matrix:
     # gcc-5 (with tests and c++14)
     - install:
       - travis_retry sudo apt-get install -y g++-5
+      - export GCOV="gcov-5"
       compiler: gcc
       env: CC_COMP="gcc-5" CXX_COMP="g++-5"
     #
@@ -94,6 +103,7 @@ script:
   - mkdir ${TRAVIS_BUILD_DIR}/build && cd ${TRAVIS_BUILD_DIR}/build
   - cmake -DCMAKE_CXX_COMPILER=${CXX_COMP} -DCMAKE_C_COMPILER=${CC_COMP}
            -DCMAKE_BUILD_TYPE=DebugRelease ${EXTRA_OPTS}
+           -DDRB_COVERAGE_Debug=ON
            -DAUTOCHECKOUT_MISSING_REPOS=ON
            -DRC_ENABLE_TESTS=OFF
            -DKRIMS_ENABLE_TESTS=OFF -DKRIMS_ENABLE_EXAMPLES=OFF
@@ -103,3 +113,10 @@ script:
   - if [ "${TESTS}" != "0" ]; then
         ctest -j ${CORES} --output-on-failure -R "${TESTS_REGEX}"
     ;else true; fi
+
+after_success:
+  - cd ${TRAVIS_BUILD_DIR}
+  - if [ "${GCOV}" ]; then coveralls --gcov "$GCOV" --gcov-options '\-lp'
+           --root ${PWD} --build-root ${PWD}/build
+           --include src/gscf
+    ;fi

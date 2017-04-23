@@ -79,7 +79,7 @@ set(GSCF_SUBDIRS src)
 # Add subdirectories for the testing.
 if(GSCF_ENABLE_TESTS)
 	add_subdirectory(tests)
-	set(GSCF_SUBDIRS ${GSCF_SUBDIRS} src)
+	set(GSCF_SUBDIRS ${GSCF_SUBDIRS} tests)
 endif()
 
 # Add subdirectories for the examples.

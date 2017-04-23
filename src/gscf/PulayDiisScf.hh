@@ -443,7 +443,7 @@ void PulayDiisScf<ScfState>::append_new_overlaps(state_type& s) const {
   // Resulting overlaps:
   std::vector<scalar_type> ret(s.errors.size(), linalgwrap::Constants<scalar_type>::zero);
   // Fill vector from behind (reverse iterator)
-  auto itoverlap = std::rbegin(ret);
+  auto itoverlap = ret.rbegin();
 
   const matrix_type& cur_error = s.errors.back();
   for (const auto& error : s.errors) {

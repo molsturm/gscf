@@ -50,7 +50,7 @@ FockMatrix::FockMatrix(size_t n_alpha, size_t n_beta,
                                                  integral_data.nbas(), false)),
         m_store_hf_terms{store_hf_terms},
         m_terms_ptr{nullptr},
-        m_energies{} {
+        m_energies() {
   build_fock_matrix_from_coefficient(initial_guess_bf);
 }
 

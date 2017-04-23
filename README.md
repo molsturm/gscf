@@ -68,12 +68,12 @@ eigenvectors ``x`` implicitly.
 The following SCF algorithms are currently implemented for this task:
 - [*Plain SCF*](src/gscf/PlainScf.hh):
   Start with an initial guess for ``A`` and diagonalise it to
-  obtain hopefully improved set of eigenpairs ``(l,x)``.
+  obtain a hopefully improved set of eigenpairs ``(l,x)``.
   From these build a new matrix ``A`` and repeat.
 - [*DIIS*](src/gscf/PulayDiisScf.hh):
-  An algorithms based on the [DIIS algorithm](https://en.wikipedia.org/wiki/DIIS)
-  by Peter Pulay.
-- [*Truncated Optimal Damping*](src/gscf/TruncatedOptDampScf.hh):
-  Based on the *Optimal damping algorithm* by Eric Cancès and Claude le Bris.
+  An scf algorithm based on the [*direct inversion of the iterative subspace*](https://en.wikipedia.org/wiki/DIIS)
+  method by Peter Pulay.
+- [*Truncated optimal damping*](src/gscf/TruncatedOptDampScf.hh):
+  Based on the *optimal-damping algorithm* by Eric Cancès and Claude le Bris.
   This algorithm is specific to the Hartree-Fock problem only.
 

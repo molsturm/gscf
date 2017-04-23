@@ -46,6 +46,15 @@ struct HFEnergies {
 
   //! The energy of the one electron terms:
   scalar_type energy_total;
+
+  HFEnergies()
+        : energy_kinetic{0},
+          energy_elec_nuc_attr(0),
+          energy_1e_terms(0),
+          energy_coulomb(0),
+          energy_exchange(0),
+          energy_2e_terms(0),
+          energy_total(0) {}
 };
 
 struct HFTerms {

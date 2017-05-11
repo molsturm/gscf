@@ -398,15 +398,14 @@ template <typename ScfState>
 void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
   using namespace linalgwrap;
   using namespace krims;
-  assert_dbg(s.prev_problem_matrix_ptrs.size() == s.diis_coefficients.size(),
-             ExcInternalError());
+  assert_internal(s.prev_problem_matrix_ptrs.size() == s.diis_coefficients.size());
 
   // Initialise an empty matrix for the DIIS guess in the state:
   s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>();
 
   // Build DIIS guess matrix to be diagonalised:
   if (s.diis_coefficients.size() == 0) {
-    assert_dbg(s.error_overlaps.size() == 0, ExcInternalError());
+    assert_internal(s.error_overlaps.size() == 0);
     // This is the first run and there are no coefficients:
     (*s.diagonalised_matrix_ptr) += s.problem_matrix();
   } else {
@@ -422,7 +421,7 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
       const probmat_type& mat = **probmat_pit;
       (*s.diagonalised_matrix_ptr) += s.diis_coefficients[i] * mat;
     }
-    assert_dbg(i == s.diis_coefficients.size(), ExcInternalError());
+    assert_internal(i == s.diis_coefficients.size());
   }
 
   on_new_diagmat(s);

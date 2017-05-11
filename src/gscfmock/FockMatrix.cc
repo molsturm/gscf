@@ -35,7 +35,7 @@ krims::Range<size_t> FockMatrix::indices_subspace(gscf::OrbitalSpace osp) const 
       return {m_n_beta, n_rows()};
   }
 
-  assert_dbg(false, krims::ExcInternalError());
+  assert_internal(false);
   return {0, 0};
 }
 
@@ -55,9 +55,9 @@ FockMatrix::FockMatrix(size_t n_alpha, size_t n_beta,
 }
 
 void FockMatrix::calc_coulomb(const matrix_type& density_bb, matrix_type& coul_bb) const {
-  assert_dbg(density_bb.n_rows() == density_bb.n_cols(), krims::ExcInternalError());
-  assert_dbg(density_bb.n_rows() == coul_bb.n_rows(), krims::ExcInternalError());
-  assert_dbg(density_bb.n_cols() == coul_bb.n_cols(), krims::ExcInternalError());
+  assert_internal(density_bb.n_rows() == density_bb.n_cols());
+  assert_internal(density_bb.n_rows() == coul_bb.n_rows());
+  assert_internal(density_bb.n_cols() == coul_bb.n_cols());
 
   // Number of basis fuctions:
   size_t nbas = density_bb.n_rows();
@@ -92,7 +92,7 @@ void FockMatrix::calc_coulomb(const matrix_type& density_bb, matrix_type& coul_b
 
 void FockMatrix::calc_exchange(const matrix_type& density_bb,
                                matrix_type& exch_bb) const {
-  assert_dbg(density_bb.n_rows() == density_bb.n_cols(), krims::ExcInternalError());
+  assert_internal(density_bb.n_rows() == density_bb.n_cols());
 
   // Number of basis fuctions:
   size_t nbas = density_bb.n_rows();

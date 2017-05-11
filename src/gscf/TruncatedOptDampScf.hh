@@ -241,7 +241,7 @@ template <typename ScfState>
 void TruncatedOptDampScf<ScfState>::solve_state(state_type& state) const {
   assert_dbg(!state.is_failed(), krims::ExcInvalidState("Cannot solve a failed state"));
 
-  assert_dbg(n_prev_steps == 2, krims::ExcNotImplemented());
+  assert_implemented(n_prev_steps == 2);
 
   while (!base_type::convergence_reached(state)) {
     base_type::start_iteration_step(state);
@@ -385,7 +385,7 @@ TruncatedOptDampScf<ScfState>::compute_damping_coeff(scalar_type oda_s,
   if (oda_s >= 0) return 1;
 
   const scalar_type new_damping_coeff = 2. * oda_c <= -oda_s ? 1 : -oda_s / (2 * oda_c);
-  assert_dbg(new_damping_coeff >= 0 && new_damping_coeff <= 1, krims::ExcInternalError());
+  assert_internal(new_damping_coeff >= 0 && new_damping_coeff <= 1);
 
   // Cap the value of the damping coefficient from below and above, such that
   // no fock prefactor gets smaller than min_fock_prefactor.

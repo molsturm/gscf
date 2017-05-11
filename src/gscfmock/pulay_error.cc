@@ -26,10 +26,8 @@ matrix_type pulay_error(const FockMatrix& fock_bb,
                         const linalgwrap::MultiVector<const vector_type>& coefficients_bf,
                         const matrix_type& overlap_bb) {
   auto occ_a = fock_bb.indices_subspace(gscf::OrbitalSpace::OCC_ALPHA);
-#ifdef DEBUG
   auto occ_b = fock_bb.indices_subspace(gscf::OrbitalSpace::OCC_BETA);
-  assert_dbg(occ_a == occ_b, krims::ExcNotImplemented());
-#endif
+  assert_implemented(occ_a == occ_b);
 
   // Occupied coefficients
   auto ca_bo = coefficients_bf.subview(occ_a);

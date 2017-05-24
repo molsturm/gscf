@@ -37,6 +37,7 @@ if you choose to do so (set ``AUTOCHECKOUT_MISSING_REPOS`` to ``ON``,
 more below)
 
 ## Building ``gscf``
+For configuring the build we need at least ``cmake`` 3.0.0.  
 All compilers starting from ``clang-3.5`` and ``gcc-4.8`` should be able to build the code.
 We strictly require ``C++11`` to build this library.
 

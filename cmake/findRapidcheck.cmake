@@ -81,6 +81,8 @@ if ("${rapidcheck_DIR}" STREQUAL "rapidcheck_DIR-NOTFOUND")
 			enable_if_compiles(CMAKE_CXX_FLAGS_STORED_TMP "-Wno-error=shift-negative-value")
 			enable_if_compiles(CMAKE_CXX_FLAGS "-Wno-error=misleading-indentation")
 			enable_if_compiles(CMAKE_CXX_FLAGS_STORED_TMP "-Wno-error=misleading-indentation")
+		elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			enable_if_compiles(CMAKE_CXX_FLAGS "-stdlib=${DRB_CXX_STANDARD_LIBRARY}")
 		endif()
 
 		# Add the rapidcheck subdirectory and configure its built.

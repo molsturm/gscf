@@ -297,12 +297,12 @@ TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
   const auto& orben_f = s.eigensolution().evalues();
 
   const auto& fp_bb = *s.prev_problem_matrix_ptr;
-  const krims::Range<size_t> occ_a = fp_bb.indices_subspace(OrbitalSpace::OCC_ALPHA);
-  const krims::Range<size_t> occ_b = fp_bb.indices_subspace(OrbitalSpace::OCC_BETA);
+  const krims::Range<size_t> occ_a = fp_bb.indices_orbspace(OrbitalSpace::OCC_ALPHA);
+  const krims::Range<size_t> occ_b = fp_bb.indices_orbspace(OrbitalSpace::OCC_BETA);
 
   assert_greater(occ_a.length(), orben_f.size());
   assert_greater(occ_b.length(), orben_f.size());
-  assert_sufficiently_tested(occ_a.length() == occ_b.length());
+  assert_sufficiently_tested(occ_a == occ_b);
 
   // In the special case where the damping coefficient is 1 the diagonalised
   // matrix equals the previous problem matrix exactly. Therefore we do not need to

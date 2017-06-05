@@ -25,6 +25,9 @@
 #include <linalgwrap/eigensystem.hh>
 #include <linalgwrap/rescue.hh>
 
+// TODO Remove once proper open-shell handling is in place
+#include "FocklikeMatrix_i.hh"
+
 namespace gscf {
 
 DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
@@ -294,7 +297,19 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
                                     "matrix pointer inside "
                                     "s.diagonalised_matrix_ptr"));
 
-  // TODO make use of SCF tolerance somehow
+  if (s.problem_matrix().indices_orbspace(OrbitalSpace::OCC_ALPHA) !=
+      s.problem_matrix().indices_orbspace(OrbitalSpace::OCC_BETA)) {
+    // TODO For unrestricted problems, this is the only thing we can do
+    //      at the moment. Would be nice to change this, however
+    //
+    // TODO When removing this todo do not forget the header above
+
+    auto ret = eigensystem_hermitian(s.diagonalised_matrix(), s.overlap_matrix(),
+                                     n_eigenpairs, eigensolver_params);
+    s.push_new_eigensolution(ret, {0, 0});
+    on_update_eigenpairs(s);
+    return;
+  }
 
   // Matrix and eigenproblem setup:
   typedef Eigenproblem</* herm= */ true, diagmat_type, overlap_type> eprob_type;

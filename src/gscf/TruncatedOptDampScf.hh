@@ -19,6 +19,7 @@
 
 #pragma once
 #include "FocklikeMatrix_i.hh"
+#include "OperatorLinearCombination.hh"
 #include "ScfBase.hh"
 #include "ScfStateBase.hh"
 #include "TruncatedOptDampScfKeys.hh"
@@ -37,16 +38,14 @@ namespace gscf {
  * */
 template <typename ProblemMatrix, typename OverlapMatrix>
 struct TruncatedOptDampScfState
-      : public ScfStateBase<
-              ProblemMatrix, OverlapMatrix,
-              linalgwrap::LazyMatrixSum<typename ProblemMatrix::stored_matrix_type>> {
+      : public ScfStateBase<ProblemMatrix, OverlapMatrix,
+                            OperatorLinearCombination<ProblemMatrix>> {
 
   static_assert(IsFocklikeMatrix<ProblemMatrix>::value,
                 "The ProblemMatrix has to be a fock-like matrix for this SCF algorithm.");
 
-  typedef ScfStateBase<
-        ProblemMatrix, OverlapMatrix,
-        linalgwrap::LazyMatrixSum<typename ProblemMatrix::stored_matrix_type>>
+  typedef ScfStateBase<ProblemMatrix, OverlapMatrix,
+                       OperatorLinearCombination<ProblemMatrix>>
         base_type;
   typedef typename base_type::probmat_type probmat_type;
   typedef typename base_type::overlap_type overlap_type;
@@ -300,9 +299,8 @@ TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
   const krims::Range<size_t> occ_a = fp_bb.indices_orbspace(OrbitalSpace::OCC_ALPHA);
   const krims::Range<size_t> occ_b = fp_bb.indices_orbspace(OrbitalSpace::OCC_BETA);
 
-  assert_greater(occ_a.length(), orben_f.size());
-  assert_greater(occ_b.length(), orben_f.size());
-  assert_sufficiently_tested(occ_a == occ_b);
+  assert_greater_equal(occ_a.length(), orben_f.size());
+  assert_greater_equal(occ_b.length(), orben_f.size());
 
   // In the special case where the damping coefficient is 1 the diagonalised
   // matrix equals the previous problem matrix exactly. Therefore we do not need to
@@ -341,10 +339,8 @@ TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
       return 2. * tr_aa;
     } else {
       // Repeat the same in the beta blocks
-
-      const auto cb_bo  = coeff_bf.subview(occ_b);
-      const auto Fcb_bo = fp_bb * coeff_bf.subview(occ_b);
-      const auto tr_bb  = trace(outer_prod_sum(cb_bo, Fcb_bo));
+      const auto cb_bo = coeff_bf.subview(occ_b);
+      const auto tr_bb = trace(outer_prod_sum(cb_bo, fp_bb * cb_bo));
       return tr_aa + tr_bb;
     }
   }
@@ -399,14 +395,14 @@ TruncatedOptDampScf<ScfState>::compute_damping_coeff(scalar_type oda_s,
 
 template <typename ScfState>
 void TruncatedOptDampScf<ScfState>::update_oda_diagmat(state_type& s) const {
-  // Initialise an empty matrix for the tODA fock matrix guess in the state:
-  s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>();
-
   if (s.prev_problem_matrix_ptr == nullptr) {
-    (*s.diagonalised_matrix_ptr) += s.problem_matrix();
+    // Initialise with the problem matrix, since no other matrix known
+    s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>(s.problem_matrix());
   } else {
-    (*s.diagonalised_matrix_ptr) += (1. - s.damping_coeff) * (*s.prev_problem_matrix_ptr);
-    (*s.diagonalised_matrix_ptr) += s.damping_coeff * s.problem_matrix();
+    // Form the linear combination between the new and the previous problem matrix
+    s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>(*s.prev_problem_matrix_ptr,
+                                                               1. - s.damping_coeff);
+    s.diagonalised_matrix_ptr->push_term(s.problem_matrix(), s.damping_coeff);
   }
 
   on_new_diagmat(s);

@@ -81,16 +81,26 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   //      mask here, which allows a more transparent handling of the
   //      alphas and betas
 
-  /** Return the index range which is used by orbitals of the specified subspace.
+  /** Return the index range which is used by orbitals of the
+   *  specified subspace.
    *
    * E.g. if oss == OCC_ALPHA the range will run over the indices of
    * all occupied alpha MOs. For restricted calculations it can be assumed
    * that OCC_ALPHA == OCC_BETA and VIRT_ALPHA == VIRT_BETA
+   *
+   * \note These ranges are only valid for coefficients and other objects
+   * which have the same structure as the coefficients which were used
+   * in the most recent call to update the Fock matrix. In other words
+   * usually this applies only to quantities from the scf iteration in
+   * which this very fock matrix was updated, i.e. the orbital energies
+   * and the coeffients, which went into making this Fock matrix.
+   * If the ranges are applied to other objects, specifically if
+   * these other objects have a different number solution orbitals,
+   * then the index ranges from here will not be applicable.
    */
-  virtual krims::Range<size_t> indices_subspace(OrbitalSpace osp) const = 0;
+  virtual krims::Range<size_t> indices_orbspace(OrbitalSpace osp) const = 0;
 
-  // TODO not needed atm.
-  ///** Return a reference to the coefficients which were used to build
+  //** Return a reference to the coefficients which were used to build
   // *  the current problem matrix.
   // *
   // *  These are exactly the coefficients, which have been supplied

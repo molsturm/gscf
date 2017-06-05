@@ -22,7 +22,7 @@
 
 namespace gscfmock {
 
-krims::Range<size_t> FockMatrix::indices_subspace(gscf::OrbitalSpace osp) const {
+krims::Range<size_t> FockMatrix::indices_orbspace(gscf::OrbitalSpace osp) const {
   using gscf::OrbitalSpace;
   switch (osp) {
     case OrbitalSpace::OCC_ALPHA:

@@ -198,7 +198,7 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
   /** Are the Hartree Fock terms stored? */
   bool are_hf_terms_stored() const { return m_store_hf_terms; }
 
-  virtual krims::Range<size_t> indices_subspace(gscf::OrbitalSpace osp) const override;
+  virtual krims::Range<size_t> indices_orbspace(gscf::OrbitalSpace osp) const override;
 
  private:
   // Struct for the individual terms:

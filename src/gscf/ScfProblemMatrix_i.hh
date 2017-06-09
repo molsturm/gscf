@@ -35,10 +35,10 @@ class ScfProblemMatrix_i {
    * Problem matrix with the new eigenvector coefficients */
   virtual const std::string& scf_update_key() const = 0;
 
-  ScfProblemMatrix_i() = default;
-  virtual ~ScfProblemMatrix_i() = default;
+  ScfProblemMatrix_i()                          = default;
+  virtual ~ScfProblemMatrix_i()                 = default;
   ScfProblemMatrix_i(const ScfProblemMatrix_i&) = default;
-  ScfProblemMatrix_i(ScfProblemMatrix_i&&) = default;
+  ScfProblemMatrix_i(ScfProblemMatrix_i&&)      = default;
   ScfProblemMatrix_i& operator=(ScfProblemMatrix_i&&) = default;
   ScfProblemMatrix_i& operator=(const ScfProblemMatrix_i&) = default;
 };

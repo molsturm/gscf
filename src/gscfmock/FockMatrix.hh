@@ -139,8 +139,7 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
   void apply(const linalgwrap::MultiVector<VectorIn>& x,
              linalgwrap::MultiVector<VectorOut>& y,
              const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
-             const scalar_type c_this = linalgwrap::Constants<scalar_type>::one,
-             const scalar_type c_y = linalgwrap::Constants<scalar_type>::zero) const {
+             const scalar_type c_this = 1, const scalar_type c_y = 0) const {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
 
@@ -148,13 +147,11 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
    *
    * Forward to stored fock matrix
    */
-  void apply(
-        const linalgwrap::MultiVector<
-              const linalgwrap::MutableMemoryVector_i<scalar_type>>& x,
-        linalgwrap::MultiVector<linalgwrap::MutableMemoryVector_i<scalar_type>>& y,
-        const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
-        const scalar_type c_this = linalgwrap::Constants<scalar_type>::one,
-        const scalar_type c_y = linalgwrap::Constants<scalar_type>::zero) const override {
+  void apply(const linalgwrap::MultiVector<
+                   const linalgwrap::MutableMemoryVector_i<scalar_type>>& x,
+             linalgwrap::MultiVector<linalgwrap::MutableMemoryVector_i<scalar_type>>& y,
+             const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
+             const scalar_type c_this = 1, const scalar_type c_y = 0) const override {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
 

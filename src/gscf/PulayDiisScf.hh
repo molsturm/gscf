@@ -416,7 +416,7 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
 
     // Form linear combination according to coefficients:
     auto probmat_pit = std::begin(s.prev_problem_matrix_ptrs);
-    size_t i = 0;
+    size_t i         = 0;
     for (; probmat_pit != std::end(s.prev_problem_matrix_ptrs); ++probmat_pit, ++i) {
       const probmat_type& mat = **probmat_pit;
       (*s.diagonalised_matrix_ptr) += s.diis_coefficients[i] * mat;

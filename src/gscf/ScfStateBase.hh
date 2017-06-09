@@ -40,7 +40,7 @@ struct EigenproblemStatistics {
         : m_n_iter(n_iter), m_n_mtx_applies(n_mtx_applies) {}
 
  private:
-  size_t m_n_iter = 0;
+  size_t m_n_iter        = 0;
   size_t m_n_mtx_applies = 0;
 };
 
@@ -285,8 +285,8 @@ void ScfStateBase<ProblemMatrix, OverlapMatrix, DiagonalisedMatrix>::
   // If memory is really an issue one should have the option to bin the previous
   // eigensolution instead.
   m_prev_eigensolution = std::move(m_eigensolution);
-  m_eigensolution = std::move(new_eigensolution);
-  m_eprob_stats = new_stats;
+  m_eigensolution      = std::move(new_eigensolution);
+  m_eprob_stats        = new_stats;
 }
 
 template <typename ProblemMatrix, typename OverlapMatrix, typename DiagonalisedMatrix>

@@ -149,22 +149,22 @@ void FockMatrix::build_fock_matrix_from_density(matrix_type pa_bb, matrix_type p
   calc_exchange(m_terms_ptr->pb_bb, m_terms_ptr->kb_bb);
 
   // Get shortcut references
-  const matrix_type& j_bb = m_terms_ptr->j_bb;
+  const matrix_type& j_bb  = m_terms_ptr->j_bb;
   const matrix_type& ka_bb = m_terms_ptr->ka_bb;
   const matrix_type& kb_bb = m_terms_ptr->kb_bb;
 
   // Calculate 1e energy:
-  m_energies.energy_kinetic = trace(m_idata_ptr->t_bb() * pt_bb);
+  m_energies.energy_kinetic       = trace(m_idata_ptr->t_bb() * pt_bb);
   m_energies.energy_elec_nuc_attr = trace(m_idata_ptr->v0_bb() * pt_bb);
   m_energies.energy_1e_terms =
         m_energies.energy_kinetic + m_energies.energy_elec_nuc_attr;
 
   // Calculate 2e energies and sum:
-  m_energies.energy_coulomb = 0.5 * trace(j_bb * pt_bb);
+  m_energies.energy_coulomb  = 0.5 * trace(j_bb * pt_bb);
   m_energies.energy_exchange = -0.5 * trace(ka_bb * m_terms_ptr->pa_bb);
   m_energies.energy_exchange -= 0.5 * trace(kb_bb * m_terms_ptr->pb_bb);
   m_energies.energy_2e_terms = m_energies.energy_coulomb + m_energies.energy_exchange;
-  m_energies.energy_total = m_energies.energy_1e_terms + m_energies.energy_2e_terms;
+  m_energies.energy_total    = m_energies.energy_1e_terms + m_energies.energy_2e_terms;
 
   // If our fock pointer is not unique, i.e. there are other users,
   // make a new one first:

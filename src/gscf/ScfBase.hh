@@ -96,9 +96,9 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    */
   void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
-    n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
-    max_error_norm = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
-    eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
+    n_eigenpairs               = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
+    max_error_norm             = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
+    eigensolver_params         = map.submap(ScfBaseKeys::eigensolver_params);
     user_eigensolver_tolerance = map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
   }
 
@@ -272,7 +272,7 @@ typename ScfBase<ScfState>::matrix_type ScfBase<ScfState>::calculate_error(
   }
 
   const auto& prev_evec = s.previous_eigensolution().evectors();
-  const auto& cur_evec = s.eigensolution().evectors();
+  const auto& cur_evec  = s.eigensolution().evectors();
   matrix_type ret(prev_evec.n_elem(), prev_evec.n_vectors(), false);
   for (size_type j = 0; j < cur_evec.n_vectors(); ++j) {
     for (size_type i = 0; i < cur_evec.n_elem(); ++i) {
@@ -347,7 +347,7 @@ void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
 
   // Obtain the expected update key from the problem matrix
   // and update the problem matrix:
-  const std::string key = s.problem_matrix().scf_update_key();
+  const std::string key     = s.problem_matrix().scf_update_key();
   const auto const_evec_ptr = s.eigensolution().evectors_ptr;
   s.problem_matrix().update({{key, const_evec_ptr}});
 

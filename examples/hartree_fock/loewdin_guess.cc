@@ -33,7 +33,7 @@ MultiVector<vector_type> loewdin_guess(const matrix_type& overlap_bb) {
     auto sol = eigensystem_hermitian(overlap_bb);
 
     // Eigenvectors and eigenvalues.
-    auto& evectors = sol.evectors();
+    auto& evectors      = sol.evectors();
     const auto& evalues = sol.evalues();
 
     assert_size(evectors.n_vectors(), overlap_bb.n_cols());

@@ -294,9 +294,9 @@ typename TruncatedOptDampScf<ScfState>::scalar_type
 TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
   // The most recent eigensolution:
   const auto& coeff_bf = s.eigensolution().evectors();
-  const auto& orben_f = s.eigensolution().evalues();
+  const auto& orben_f  = s.eigensolution().evalues();
+  const auto& fp_bb    = *s.prev_problem_matrix_ptr;
 
-  const auto& fp_bb = *s.prev_problem_matrix_ptr;
   const krims::Range<size_t> occ_a = fp_bb.indices_orbspace(OrbitalSpace::OCC_ALPHA);
   const krims::Range<size_t> occ_b = fp_bb.indices_orbspace(OrbitalSpace::OCC_BETA);
 
@@ -342,9 +342,9 @@ TruncatedOptDampScf<ScfState>::trace_fprev_dcur(state_type& s) const {
     } else {
       // Repeat the same in the beta blocks
 
-      const auto cb_bo = coeff_bf.subview(occ_b);
+      const auto cb_bo  = coeff_bf.subview(occ_b);
       const auto Fcb_bo = fp_bb * coeff_bf.subview(occ_b);
-      const auto tr_bb = trace(outer_prod_sum(cb_bo, Fcb_bo));
+      const auto tr_bb  = trace(outer_prod_sum(cb_bo, Fcb_bo));
       return tr_aa + tr_bb;
     }
   }

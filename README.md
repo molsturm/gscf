@@ -5,7 +5,7 @@
 
 A library of algorithms for solving *non-linear generalised eigenproblems*
 as they frequently occur when finding a *self-consistent field* (SCF) solution
-to a partial differential equation in theoretical Physics or Chemistry.
+to a partial differential equation in theoretical physics or chemistry.
 
 At the moment the major application of the code is electronic structure theory,
 more precisely solving the
@@ -72,7 +72,7 @@ eigenvectors ``x`` implicitly.
 The following SCF algorithms are currently implemented for this task:
 - [*Plain SCF*](src/gscf/PlainScf.hh):
   Start with an initial guess for ``A`` and diagonalise it to
-  obtain a hopefully improved set of eigenpairs ``(l,x)``.
+  obtain a hopefully improved set of eigenpairs ``(v,x)``.
   From these build a new matrix ``A`` and repeat.
 - [*DIIS*](src/gscf/PulayDiisScf.hh):
   An scf algorithm based on the [*direct inversion of the iterative subspace*](https://en.wikipedia.org/wiki/DIIS)

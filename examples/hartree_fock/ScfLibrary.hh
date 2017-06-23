@@ -47,7 +47,7 @@ class VerboseScf : public Solver {
 
     assert_dbg(m_writer, krims::ExcIO());
     const auto& evalues = s.eigensolution().evalues();
-    auto evectors = s.eigensolution().evectors();
+    auto evectors       = s.eigensolution().evectors();
 
     m_writer.write("evals" + std::to_string(s.n_iter()),
                    linalgwrap::make_as_multivector<vector_type>(evalues));
@@ -61,9 +61,9 @@ class VerboseScf : public Solver {
   }
 
   void on_update_problem_matrix(state_type& s) const override {
-    auto error = Solver::calculate_error(s);
-    auto hf_energies = s.problem_matrix().energies();
-    auto n_iter = s.n_iter();
+    auto error        = Solver::calculate_error(s);
+    auto hf_energies  = s.problem_matrix().energies();
+    auto n_iter       = s.n_iter();
     std::string itstr = std::to_string(n_iter);
 
     assert_dbg(s.problem_matrix().are_hf_terms_stored(),

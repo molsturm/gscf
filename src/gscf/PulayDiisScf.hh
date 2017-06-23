@@ -18,6 +18,7 @@
 //
 
 #pragma once
+#include "OperatorLinearCombination.hh"
 #include "PulayDiisScfKeys.hh"
 #include "ScfBase.hh"
 #include "ScfStateBase.hh"
@@ -35,13 +36,10 @@ DefSolverException1(ExcDiisStepFailed, std::string, details,
  * \tparam ProblemMatrix The type of the Problem matrix object.
  * */
 template <typename ProblemMatrix, typename OverlapMatrix>
-struct PulayDiisScfState
-      : public ScfStateBase<
-              ProblemMatrix, OverlapMatrix,
-              linalgwrap::LazyMatrixSum<typename ProblemMatrix::stored_matrix_type>> {
-  typedef ScfStateBase<
-        ProblemMatrix, OverlapMatrix,
-        linalgwrap::LazyMatrixSum<typename ProblemMatrix::stored_matrix_type>>
+struct PulayDiisScfState : public ScfStateBase<ProblemMatrix, OverlapMatrix,
+                                               OperatorLinearCombination<ProblemMatrix>> {
+  typedef ScfStateBase<ProblemMatrix, OverlapMatrix,
+                       OperatorLinearCombination<ProblemMatrix>>
         base_type;
   typedef typename base_type::probmat_type probmat_type;
   typedef typename base_type::overlap_type overlap_type;
@@ -400,14 +398,12 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
   using namespace krims;
   assert_internal(s.prev_problem_matrix_ptrs.size() == s.diis_coefficients.size());
 
-  // Initialise an empty matrix for the DIIS guess in the state:
-  s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>();
-
   // Build DIIS guess matrix to be diagonalised:
   if (s.diis_coefficients.size() == 0) {
     assert_internal(s.error_overlaps.size() == 0);
-    // This is the first run and there are no coefficients:
-    (*s.diagonalised_matrix_ptr) += s.problem_matrix();
+    // This is the first run and there are no coefficients,
+    // so just build a new operator from scratch
+    s.diagonalised_matrix_ptr = std::make_shared<diagmat_type>(s.problem_matrix());
   } else {
     // TODO
     // TODO Ignore Fock matrices where the coefficient is too small
@@ -416,10 +412,19 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
 
     // Form linear combination according to coefficients:
     auto probmat_pit = std::begin(s.prev_problem_matrix_ptrs);
-    size_t i = 0;
+    size_t i         = 0;
+
+    // First coefficient
+    assert_internal(s.prev_problem_matrix_ptrs.size() > 0);
+    s.diagonalised_matrix_ptr =
+          std::make_shared<diagmat_type>(**probmat_pit, s.diis_coefficients[i]);
+    ++i;
+    ++probmat_pit;
+
+    // All other coefficients
     for (; probmat_pit != std::end(s.prev_problem_matrix_ptrs); ++probmat_pit, ++i) {
       const probmat_type& mat = **probmat_pit;
-      (*s.diagonalised_matrix_ptr) += s.diis_coefficients[i] * mat;
+      s.diagonalised_matrix_ptr->push_term(mat, s.diis_coefficients[i]);
     }
     assert_internal(i == s.diis_coefficients.size());
   }

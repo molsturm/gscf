@@ -108,10 +108,10 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   // */
   // virtual const linalgwrap::MultiVector<vector_type>& coefficients() const = 0;
 
-  FocklikeMatrix_i() = default;
-  virtual ~FocklikeMatrix_i() = default;
+  FocklikeMatrix_i()                        = default;
+  virtual ~FocklikeMatrix_i()               = default;
   FocklikeMatrix_i(const FocklikeMatrix_i&) = default;
-  FocklikeMatrix_i(FocklikeMatrix_i&&) = default;
+  FocklikeMatrix_i(FocklikeMatrix_i&&)      = default;
   FocklikeMatrix_i& operator=(FocklikeMatrix_i&&) = default;
   FocklikeMatrix_i& operator=(const FocklikeMatrix_i&) = default;
 };

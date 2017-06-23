@@ -25,9 +25,9 @@ namespace gscfmock {
 /** Class for dummy integrals around an atom */
 class IntegralDataBase : public krims::Subscribable {
  public:
-  IntegralDataBase() = default;
-  virtual ~IntegralDataBase() = default;
-  IntegralDataBase(IntegralDataBase&&) = default;
+  IntegralDataBase()                        = default;
+  virtual ~IntegralDataBase()               = default;
+  IntegralDataBase(IntegralDataBase&&)      = default;
   IntegralDataBase(const IntegralDataBase&) = default;
   IntegralDataBase& operator=(IntegralDataBase&&) = default;
   IntegralDataBase& operator=(const IntegralDataBase&) = default;

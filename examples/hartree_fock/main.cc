@@ -80,11 +80,11 @@ void run_sturmian14(double nuc_charge, double k_exp, size_t n_alpha, size_t n_be
 }  // namespace dummy_scf
 
 int main() {
-  const std::string atom = "Be";
-  const double k_exp = 1.351;
+  const std::string atom  = "Be";
+  const double k_exp      = 1.351;
   const size_t nuc_charge = 4.;
-  const size_t n_alpha = nuc_charge / 2;
-  const size_t n_beta = nuc_charge / 2;
+  const size_t n_alpha    = nuc_charge / 2;
+  const size_t n_beta     = nuc_charge / 2;
 
   std::cout << "gscf version: " << gscf::version::version_string() << std::endl
             << "linalgwrap version: " << linalgwrap::version::version_string()

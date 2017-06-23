@@ -25,6 +25,9 @@
 #include <linalgwrap/eigensystem.hh>
 #include <linalgwrap/rescue.hh>
 
+// TODO Remove once proper open-shell handling is in place
+#include "FocklikeMatrix_i.hh"
+
 namespace gscf {
 
 DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
@@ -96,9 +99,9 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    */
   void update_control_params(const krims::GenMap& map) {
     base_type::update_control_params(map);
-    n_eigenpairs = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
-    max_error_norm = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
-    eigensolver_params = map.submap(ScfBaseKeys::eigensolver_params);
+    n_eigenpairs               = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
+    max_error_norm             = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
+    eigensolver_params         = map.submap(ScfBaseKeys::eigensolver_params);
     user_eigensolver_tolerance = map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
   }
 
@@ -272,7 +275,7 @@ typename ScfBase<ScfState>::matrix_type ScfBase<ScfState>::calculate_error(
   }
 
   const auto& prev_evec = s.previous_eigensolution().evectors();
-  const auto& cur_evec = s.eigensolution().evectors();
+  const auto& cur_evec  = s.eigensolution().evectors();
   matrix_type ret(prev_evec.n_elem(), prev_evec.n_vectors(), false);
   for (size_type j = 0; j < cur_evec.n_vectors(); ++j) {
     for (size_type i = 0; i < cur_evec.n_elem(); ++i) {
@@ -294,7 +297,19 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
                                     "matrix pointer inside "
                                     "s.diagonalised_matrix_ptr"));
 
-  // TODO make use of SCF tolerance somehow
+  if (s.problem_matrix().indices_orbspace(OrbitalSpace::OCC_ALPHA) !=
+      s.problem_matrix().indices_orbspace(OrbitalSpace::OCC_BETA)) {
+    // TODO For unrestricted problems, this is the only thing we can do
+    //      at the moment. Would be nice to change this, however
+    //
+    // TODO When removing this todo do not forget the header above
+
+    auto ret = eigensystem_hermitian(s.diagonalised_matrix(), s.overlap_matrix(),
+                                     n_eigenpairs, eigensolver_params);
+    s.push_new_eigensolution(ret, {0, 0});
+    on_update_eigenpairs(s);
+    return;
+  }
 
   // Matrix and eigenproblem setup:
   typedef Eigenproblem</* herm= */ true, diagmat_type, overlap_type> eprob_type;
@@ -347,7 +362,7 @@ void ScfBase<ScfState>::update_problem_matrix(state_type& s) const {
 
   // Obtain the expected update key from the problem matrix
   // and update the problem matrix:
-  const std::string key = s.problem_matrix().scf_update_key();
+  const std::string key     = s.problem_matrix().scf_update_key();
   const auto const_evec_ptr = s.eigensolution().evectors_ptr;
   s.problem_matrix().update({{key, const_evec_ptr}});
 

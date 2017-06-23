@@ -39,9 +39,9 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
 
   // The test problem
   double z_charge = 4.;  // Be atom
-  double k_exp = 1.;
-  size_t n_alpha = 2;
-  size_t n_beta = 2;
+  double k_exp    = 1.;
+  size_t n_alpha  = 2;
+  size_t n_beta   = 2;
 
   // Setup integral data
   gscfmock::IntegralsSturmian14 idata(z_charge, k_exp);
@@ -98,9 +98,9 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
 
   // The expected energies:
   scalar_type exp_energy_1e_terms = -14.91401133311085;
-  scalar_type exp_energy_coulomb = 5.268082025558712;
+  scalar_type exp_energy_coulomb  = 5.268082025558712;
   scalar_type exp_energy_exchange = -1.736263121264314;
-  scalar_type exp_energy_total = -11.38219242881645;
+  scalar_type exp_energy_total    = -11.38219242881645;
 
   // Since we only converge to 5e-7, allow errors up to this degree.
   const double basetol = 5e-7;

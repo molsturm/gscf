@@ -81,6 +81,8 @@ if ("${rapidcheck_DIR}" STREQUAL "rapidcheck_DIR-NOTFOUND")
 			enable_if_compiles(CMAKE_CXX_FLAGS_STORED_TMP "-Wno-error=shift-negative-value")
 			enable_if_compiles(CMAKE_CXX_FLAGS "-Wno-error=misleading-indentation")
 			enable_if_compiles(CMAKE_CXX_FLAGS_STORED_TMP "-Wno-error=misleading-indentation")
+			enable_if_compiles(CMAKE_CXX_FLAGS "-Wno-error=strict-aliasing")
+			enable_if_compiles(CMAKE_CXX_FLAGS_STORED_TMP "-Wno-error=strict-aliasing")
 		endif()
 
 		stdlib_cxx_flags(${DRB_CXX_STANDARD_LIBRARY} CMAKE_CXX_FLAGS dummy)

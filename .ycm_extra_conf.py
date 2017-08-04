@@ -47,15 +47,6 @@ flags = [
     '-fexceptions',
     # Compile debug code as well
     '-DDEBUG',
-    # Compile extra code blocks:
-    # '-DLINALGWRAP_HAVE_GLIBC_STACKTRACE',
-    '-DLINALGWRAP_HAVE_ARMADILLO',
-    '-DLINALGWRAP_HAVE_ARPACK',
-    '-DLINALGWRAP_HAVE_LAPACK',
-    # C++14 code blocks:
-    '-DLINALGWRAP_HAVE_CXX14',
-    '-DKRIMS_HAVE_CXX14',
-    '-DGSCF_HAVE_CXX14',
     # Compile as c++14
     '-std=c++14',
     # Treat .h header files as c++:

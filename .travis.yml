@@ -35,7 +35,7 @@ env:
     - CORES=2
     #
     # Use a known-to-work rapidcheck seed
-    #- RC_PARAMS="seed=16920708173099178154 verbose_progress=1 noshrink=1"
+    - RC_PARAMS="seed=16920708173099178154 verbose_progress=1 noshrink=1"
     #
     # The regex for tests to run (disable running tests by TESTS=0)
     - TESTS=1  TESTS_REGEX="gscf_tests_"

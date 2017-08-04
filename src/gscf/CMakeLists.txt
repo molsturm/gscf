@@ -30,8 +30,8 @@ set(GSCF_SOURCES
 )
 
 # Dump the current version as an include file.
-include_krims_cmake_module(WriteVersionHeader)
-write_version_header("${gscf_BINARY_DIR}/src/gscf/version_defs.hh")
+# Write the config file config.hh (into the binary dir)
+configure_file("config.hh.in"  "config.hh")
 
 # Add the libraries for Debug and Release builds:
 drb_add_library(gscf
@@ -66,7 +66,7 @@ install(DIRECTORY .
 	COMPONENT devel
 	FILES_MATCHING PATTERN "*.hh"
 )
-install(FILES "${gscf_BINARY_DIR}/src/gscf/version_defs.hh"
+install(FILES "${gscf_BINARY_DIR}/src/gscf/config.hh"
 	DESTINATION "include/gscf"
 	COMPONENT devel
 )

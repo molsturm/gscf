@@ -29,16 +29,6 @@ include_krims_cmake_module(DebugReleaseBuild)
 drb_init()
 
 ##########################################################################
-# Global options
-
-# Path where cmake wants the modules and config packages:
-set(PackageModuleLocation share/cmake)
-
-# setup global options (needs to be done before call to project())
-option(GSCF_ENABLE_TESTS "Build gscf tests" ON)
-option(GSCF_ENABLE_EXAMPLES "Build gscf examples" ON)
-
-##########################################################################
 # Project setup
 
 project(gscf VERSION 0.0.0)
@@ -50,6 +40,18 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 
 # enable testing of this project
 enable_testing()
+
+##########################################################################
+# Global options
+
+# Path where cmake wants the modules and config packages:
+set(PackageModuleLocation share/cmake)
+
+# setup global options
+include(GlobalOption)
+global_option(ENABLE_DOCUMENTATION "Build documentation"         OFF )
+global_option(ENABLE_EXAMPLES      "Build example executables"   ON  )
+global_option(ENABLE_TESTS         "Build unit test executables" ON  )
 
 ##########################################################################
 # Setup hard and optional dependencies and find components
@@ -86,6 +88,10 @@ endif()
 if(GSCF_ENABLE_EXAMPLES)
 	add_subdirectory(examples)
 	set(GSCF_SUBDIRS ${GSCF_SUBDIRS} examples)
+endif()
+
+if (GSCF_ENABLE_DOCUMENTATION)
+	add_subdirectory(doc)
 endif()
 
 ##########################################################################

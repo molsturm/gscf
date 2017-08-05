@@ -61,7 +61,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   /** Return the one electron energy, i.e. the energy of the
    *  terms independent of the electron density.
    *
-   *  This energy is usually proportional to \f$\tr(h D)\f$,
+   *  This energy is usually proportional to \f$tr(h D)\f$,
    *  where \f$h\f$ is the part of this matrix, which is
    *  constant wrt. changes in the density \f$D\f$ (the core
    *  hamiltonian).
@@ -70,7 +70,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
 
   /** Return the two electron energy.
    *
-   *  This energy is usually proportional to \f$\frac 1 2 \tr(G D)\f$,
+   *  This energy is usually proportional to \f$\frac 1 2 tr(G D)\f$,
    *  where \f$G\f$ is the part of this matrix, which is
    *  dependant on the density \f$D\f$, i.e. the Coulomb and Exchange
    *  matrices.

@@ -18,13 +18,13 @@
 //
 
 #pragma once
-#include <linalgwrap/Base/Solvers.hh>
+#include <lazyten/Base/Solvers.hh>
 
 namespace gscf {
 
 /** Struct which contains the keys used for setting the
  *  ScfBase parameters */
-struct ScfBaseKeys : public linalgwrap::IterativeWrapperKeys {
+struct ScfBaseKeys : public lazyten::IterativeWrapperKeys {
   /** The number of eigenpairs to compute. Type: size_type */
   static const std::string n_eigenpairs;
 

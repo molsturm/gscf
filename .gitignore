@@ -13,5 +13,5 @@ build
 # external projects
 external/.last_pull
 external/rapidcheck
-external/linalgwrap
+external/lazyten
 external/krims

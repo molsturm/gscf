@@ -18,10 +18,10 @@
 //
 
 #include "loewdin_guess.hh"
-#include <linalgwrap/eigensystem.hh>
+#include <lazyten/eigensystem.hh>
 
 namespace dummy_scf {
-using namespace linalgwrap;
+using namespace lazyten;
 
 MultiVector<vector_type> loewdin_guess(const matrix_type& overlap_bb) {
   // apply Löwdin normalisation to the basis functions
@@ -44,7 +44,7 @@ MultiVector<vector_type> loewdin_guess(const matrix_type& overlap_bb) {
     }
 
     return std::move(sol.evectors());
-  } catch (const linalgwrap::SolverException& e) {
+  } catch (const lazyten::SolverException& e) {
     std::cerr << "Obtaining Löwdin guess failed, using zero guess" << std::endl;
     return MultiVector<vector_type>(overlap_bb.n_rows(), overlap_bb.n_cols());
   }

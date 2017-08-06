@@ -28,7 +28,7 @@
 # Settings
 #
 # The git repo to checkout
-FROM="https://github.com/linalgwrap/krims.git"
+FROM="https://github.com/lazyten/krims.git"
 
 # Branch to checkout (empty for default)
 BRANCH=""

@@ -19,5 +19,5 @@
 ## along with gscf. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-rm -rf .last_pull krims linalgwrap rapidcheck
+rm -rf .last_pull krims lazyten rapidcheck
 exit $?

@@ -19,13 +19,13 @@
 
 #pragma once
 #include <gscfmock/types.hh>
-#include <linalgwrap/MultiVector.hh>
+#include <lazyten/MultiVector.hh>
 
 namespace dummy_scf {
 using gscfmock::matrix_type;
 using gscfmock::scalar_type;
 using gscfmock::vector_type;
 
-linalgwrap::MultiVector<vector_type> loewdin_guess(const matrix_type& overlap_bb);
+lazyten::MultiVector<vector_type> loewdin_guess(const matrix_type& overlap_bb);
 
 }  // namespace dummy_scf

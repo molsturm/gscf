@@ -20,7 +20,7 @@
 #pragma once
 #include "Integrals/IntegralDataBase.hh"
 #include <gscf/FocklikeMatrix_i.hh>
-#include <linalgwrap/LazyMatrix_i.hh>
+#include <lazyten/LazyMatrix_i.hh>
 
 namespace gscfmock {
 
@@ -88,10 +88,10 @@ struct HFTerms {
 
 /** Very simple and slow implementation of a Fock matrix class for a
  * closed-shell System */
-class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
+class FockMatrix final : public lazyten::LazyMatrix_i<matrix_type>,
                          public gscf::FocklikeMatrix_i<scalar_type> {
  public:
-  typedef linalgwrap::LazyMatrix_i<matrix_type> base_type;
+  typedef lazyten::LazyMatrix_i<matrix_type> base_type;
   typedef gscfmock::scalar_type scalar_type;
   typedef typename base_type::lazy_matrix_expression_ptr_type
         lazy_matrix_expression_ptr_type;
@@ -114,7 +114,7 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
    *                         (exchange matrix, coulomb matrix, ...)
    */
   FockMatrix(size_t n_alpha, size_t n_beta, const IntegralDataBase& integral_data,
-             const linalgwrap::MultiVector<vector_type>& initial_guess_bf,
+             const lazyten::MultiVector<vector_type>& initial_guess_bf,
              bool store_hf_terms = false);
 
   /** Return the number of rows of the matrix */
@@ -135,10 +135,9 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
    * Forward to stored fock matrix
    */
   template <typename VectorIn, typename VectorOut,
-            linalgwrap::mat_vec_apply_enabled_t<FockMatrix, VectorIn, VectorOut>...>
-  void apply(const linalgwrap::MultiVector<VectorIn>& x,
-             linalgwrap::MultiVector<VectorOut>& y,
-             const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
+            lazyten::mat_vec_apply_enabled_t<FockMatrix, VectorIn, VectorOut>...>
+  void apply(const lazyten::MultiVector<VectorIn>& x, lazyten::MultiVector<VectorOut>& y,
+             const lazyten::Transposed mode = lazyten::Transposed::None,
              const scalar_type c_this = 1, const scalar_type c_y = 0) const {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
@@ -147,11 +146,11 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
    *
    * Forward to stored fock matrix
    */
-  void apply(const linalgwrap::MultiVector<
-                   const linalgwrap::MutableMemoryVector_i<scalar_type>>& x,
-             linalgwrap::MultiVector<linalgwrap::MutableMemoryVector_i<scalar_type>>& y,
-             const linalgwrap::Transposed mode = linalgwrap::Transposed::None,
-             const scalar_type c_this = 1, const scalar_type c_y = 0) const override {
+  void apply(
+        const lazyten::MultiVector<const lazyten::MutableMemoryVector_i<scalar_type>>& x,
+        lazyten::MultiVector<lazyten::MutableMemoryVector_i<scalar_type>>& y,
+        const lazyten::Transposed mode = lazyten::Transposed::None,
+        const scalar_type c_this = 1, const scalar_type c_y = 0) const override {
     m_fock_ptr->apply(x, y, mode, c_this, c_y);
   }
 
@@ -172,7 +171,7 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
   void update(const krims::GenMap& map) override {
     if (map.exists(m_update_key)) {
       build_fock_matrix_from_coefficient(
-            map.at<const linalgwrap::MultiVector<vector_type>>(m_update_key));
+            map.at<const lazyten::MultiVector<vector_type>>(m_update_key));
     }
   }
 
@@ -210,7 +209,7 @@ class FockMatrix final : public linalgwrap::LazyMatrix_i<matrix_type>,
 
   /** Build the Fock matrix from a coefficient */
   void build_fock_matrix_from_coefficient(
-        const linalgwrap::MultiVector<vector_type>& coefficients_bf);
+        const lazyten::MultiVector<vector_type>& coefficients_bf);
 
   /** Build the Fock matrix from alpha and beta densities */
   void build_fock_matrix_from_density(stored_matrix_type pa_bb, stored_matrix_type pb_bb);

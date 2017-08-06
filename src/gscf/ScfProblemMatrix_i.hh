@@ -26,7 +26,7 @@ namespace gscf {
  *  expect a problem matrix to satisfy.
  *
  *  Apart from the interface given here the problem matrix should
- *  be a linalgwrap::LazyMatrixExpression, i.e. its internal state
+ *  be a lazyten::LazyMatrixExpression, i.e. its internal state
  *  should be updateable using the function update().
  */
 class ScfProblemMatrix_i {

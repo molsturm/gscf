@@ -18,18 +18,18 @@
 //
 
 #pragma once
-#include <linalgwrap/BlockDiagonalMatrix.hh>
-#include <linalgwrap/LazyMatrixSum.hh>
+#include <lazyten/BlockDiagonalMatrix.hh>
+#include <lazyten/LazyMatrixSum.hh>
 
 namespace gscf {
 
 template <typename Operator,
-          bool BlockDiagonal = linalgwrap::IsBlockDiagonalMatrix<Operator>::value>
+          bool BlockDiagonal = lazyten::IsBlockDiagonalMatrix<Operator>::value>
 struct OperatorLinearCombination
-      : public linalgwrap::LazyMatrixSum<typename Operator::stored_matrix_type> {
+      : public lazyten::LazyMatrixSum<typename Operator::stored_matrix_type> {
   typedef Operator operator_type;
   typedef typename operator_type::scalar_type scalar_type;
-  typedef linalgwrap::LazyMatrixSum<typename Operator::stored_matrix_type> base_type;
+  typedef lazyten::LazyMatrixSum<typename Operator::stored_matrix_type> base_type;
 
   /** \note An operator is required at initialisation since the BlockDiagonalMatrix
    *        need to know the sizes of the blocks
@@ -48,16 +48,15 @@ struct OperatorLinearCombination
 
 template <typename Operator>
 struct OperatorLinearCombination<Operator, true>
-      : public linalgwrap::BlockDiagonalMatrix<
-              linalgwrap::LazyMatrixSum<typename Operator::stored_matrix_type>,
+      : public lazyten::BlockDiagonalMatrix<
+              lazyten::LazyMatrixSum<typename Operator::stored_matrix_type>,
               Operator::n_blocks> {
   typedef Operator operator_type;
   typedef typename operator_type::scalar_type scalar_type;
-  typedef linalgwrap::BlockDiagonalMatrix<
-        linalgwrap::LazyMatrixSum<typename Operator::stored_matrix_type>,
-        Operator::n_blocks>
+  typedef lazyten::BlockDiagonalMatrix<
+        lazyten::LazyMatrixSum<typename Operator::stored_matrix_type>, Operator::n_blocks>
         base_type;
-  typedef linalgwrap::LazyMatrixSum<typename Operator::stored_matrix_type> block_type;
+  typedef lazyten::LazyMatrixSum<typename Operator::stored_matrix_type> block_type;
 
   /** \note An operator is required at initialisation since the BlockDiagonalMatrix
    *        need to know the sizes of the blocks

@@ -24,11 +24,11 @@
 #include <gscfmock/FockMatrix.hh>
 #include <gscfmock/Integrals.hh>
 #include <gscfmock/error_wrapped_solvers.hh>
-#include <linalgwrap/TestingUtils.hh>
+#include <lazyten/TestingUtils.hh>
 
 namespace gscf {
 namespace tests {
-using namespace linalgwrap;
+using namespace lazyten;
 using namespace krims;
 
 TEST_CASE("SCF functionality test", "[SCF functionality]") {
@@ -122,7 +122,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     // TODO For comparing all of them one needs to take rotations
     //      inside degenerate subspaces into account
     for (size_t i = 0; i < n_alpha; ++i) {
-      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      lazyten::adjust_phase(evectors[i], evec_expected[i]);
       CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
     }
 
@@ -151,7 +151,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     //      inside degenerate subspaces into account
     for (size_t i = 0; i < n_alpha; ++i) {
       INFO("Comparing vector " + std::to_string(i));
-      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      lazyten::adjust_phase(evectors[i], evec_expected[i]);
       CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
     }
 
@@ -181,7 +181,7 @@ TEST_CASE("SCF functionality test", "[SCF functionality]") {
     //      inside degenerate subspaces into account
     for (size_t i = 0; i < n_alpha; ++i) {
       INFO("Comparing vector " + std::to_string(i));
-      linalgwrap::adjust_phase(evectors[i], evec_expected[i]);
+      lazyten::adjust_phase(evectors[i], evec_expected[i]);
       CHECK(evectors[i] == numcomp(evec_expected[i]).tolerance(10. * basetol));
     }
 

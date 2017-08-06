@@ -26,7 +26,7 @@
 #include <gscf/version.hh>
 #include <gscfmock/FockMatrix.hh>
 #include <gscfmock/Integrals.hh>
-#include <linalgwrap/version.hh>
+#include <lazyten/version.hh>
 
 namespace dummy_scf {
 /** Run an (atomic) SCF based on the integral data Sturmian14.
@@ -50,7 +50,7 @@ void run_sturmian14(double nuc_charge, double k_exp, size_t n_alpha, size_t n_be
   filename << "/tmp/debug_gscf_scfdummy_" << method << "_" << nuc_charge << "_" << k_exp
            << "_sturm14.m";
   std::ofstream mathematicafile(filename.str());
-  auto debugout = linalgwrap::io::make_writer<linalgwrap::io::Mathematica, scalar_type>(
+  auto debugout = lazyten::io::make_writer<lazyten::io::Mathematica, scalar_type>(
         mathematicafile, 1e-5);
 
   // Define integral data and obtain a guess
@@ -87,8 +87,7 @@ int main() {
   const size_t n_beta     = nuc_charge / 2;
 
   std::cout << "gscf version: " << gscf::version::version_string() << std::endl
-            << "linalgwrap version: " << linalgwrap::version::version_string()
-            << std::endl
+            << "lazyten version: " << lazyten::version::version_string() << std::endl
             << "We compute closed-shell " << atom << " atom using k_exp == " << k_exp
             << std::endl
             << std::endl;

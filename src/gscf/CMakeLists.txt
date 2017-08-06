@@ -56,12 +56,12 @@ drb_target_link_libraries(RELEASE gscf ${GSCF_DEPENDENCIES_RELEASE})
 # set the installation property for these targets:
 install(TARGETS ${gscf_TARGETS}
 	EXPORT GscfTargets
-	DESTINATION lib 
+	DESTINATION lib
 	COMPONENT library
 )
 
 # install the includes:
-install(DIRECTORY . 
+install(DIRECTORY .
 	DESTINATION "include/gscf"
 	COMPONENT devel
 	FILES_MATCHING PATTERN "*.hh"

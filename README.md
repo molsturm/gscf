@@ -17,21 +17,21 @@ Hence the name ``gscf`` for **g**eneralised **SCF**.
 
 ## Dependencies
 ``gscf`` depends on the following:
-- [krims](https://linalgwrap.org/krims) for many basic utilities
+- [krims](https://lazyten.org/krims) for many basic utilities
   (GenMap, Exception handling, Subscription pointers, ...)
-- [linalgwrap](https://linalgwrap.org/) as a flexible linear algebra backend.
-  ``linalgwrap`` has further dependencies in order to perform the
+- [lazyten](https://lazyten.org/) as a flexible linear algebra backend.
+  ``lazyten`` has further dependencies in order to perform the
   linear algebra.
-  See [github.com/linalgwrap/linalgwrap](https://github.com/linalgwrap/linalgwrap/blob/master/README.md) for details.
+  See [github.com/lazyten/lazyten](https://github.com/lazyten/lazyten/blob/master/README.md) for details.
 
 Testing ``gscf`` further requires
 - [Catch](https://github.com/philsquared/Catch/) for the testing environment
 - [rapidcheck](https://github.com/emil-e/rapidcheck) for property-based testing
 
 For building ``gscf`` (see [below](#building-gscf)) you only need the ``gscf``
-source code and the build dependencies of linalgwrap, i.e. armadillo,
+source code and the build dependencies of `lazyten`, i.e. armadillo,
 LAPACK and some BLAS library to be present on your system.
-The other dependencies (including ``krims`` and ``linalgwrap``)
+The other dependencies (including ``krims`` and ``lazyten``)
 can be automatically downloaded during the build process
 if you choose to do so (set ``AUTOCHECKOUT_MISSING_REPOS`` to ``ON``,
 more below)
@@ -56,8 +56,7 @@ ctest
 In order to build without tests run
 ```
 mkdir build && cd build
-cmake -DAUTOCHECKOUT_MISSING_REPOS=ON -DGSCF_ENABLE_TESTS=OFF -DLINALGWRAP_ENABLE_TESTS=OFF \
-    -DKRIMS_ENABLE_TESTS=OFF ..
+cmake -DAUTOCHECKOUT_MISSING_REPOS=ON -DENABLE_TESTS=OFF ..
 cmake --build .
 ```
 

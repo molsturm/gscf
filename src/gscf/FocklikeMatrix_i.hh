@@ -43,7 +43,7 @@ enum class OrbitalSpace {
  *  require from the Problem matrix to be solved.
  *
  *  It essentially is an extension to the default, generic, problem
- *  matrix interface given by a linalgwrap::LazyMatrixExpression,
+ *  matrix interface given by a lazyten::LazyMatrixExpression,
  *  which is required for some SCF solvers which are used especially
  *  in quantum chemistry.
  *
@@ -106,7 +106,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   // *  These are exactly the coefficients, which have been supplied
   // *  by the most recent call to update() to this matrix object.
   // */
-  // virtual const linalgwrap::MultiVector<vector_type>& coefficients() const = 0;
+  // virtual const lazyten::MultiVector<vector_type>& coefficients() const = 0;
 
   FocklikeMatrix_i()                        = default;
   virtual ~FocklikeMatrix_i()               = default;

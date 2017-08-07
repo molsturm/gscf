@@ -45,10 +45,6 @@ drb_set_target_properties(
 	VERSION "${PROJECT_VERSION}"
 )
 
-drb_target_compile_definitions(ALL     gscf PUBLIC ${GSCF_DEFINITIONS})
-drb_target_compile_definitions(DEBUG   gscf PUBLIC ${GSCF_DEFINITIONS_DEBUG})
-drb_target_compile_definitions(RELEASE gscf PUBLIC ${GSCF_DEFINITIONS_RELEASE})
-
 drb_target_link_libraries(ALL     gscf ${GSCF_DEPENDENCIES})
 drb_target_link_libraries(DEBUG   gscf ${GSCF_DEPENDENCIES_DEBUG})
 drb_target_link_libraries(RELEASE gscf ${GSCF_DEPENDENCIES_RELEASE})

@@ -26,10 +26,6 @@
 #       GSCF_DEPENDENCIES_RELEASE		release mode needs these extras
 #       GSCF_DEPENDENCIES_TEST			tests need these extra libraries
 #
-#       GSCF_DEFINITIONS			definitions for all compilation
-#       GSCF_DEFINITIONS_DEBUG			definitions for debug mode
-#       GSCF_DEFINITIONS_RELEASE		definitions for release mode
-#
 
 ####################
 #-- Empty it all --#
@@ -38,9 +34,6 @@ set(GSCF_DEPENDENCIES "")
 set(GSCF_DEPENDENCIES_DEBUG "")
 set(GSCF_DEPENDENCIES_RELEASE "")
 set(GSCF_DEPENDENCIES_TEST "")
-set(GSCF_DEFINITIONS "")
-set(GSCF_DEFINITIONS_DEBUG "")
-set(GSCF_DEFINITIONS_RELEASE "")
 
 ############################
 #-- rapidcheck and catch --#

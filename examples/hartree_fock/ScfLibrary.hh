@@ -21,7 +21,7 @@
 #include <gscfmock/error_wrapped_solvers.hh>
 #include <iostream>
 #include <iterator>
-#include <linalgwrap/io.hh>
+#include <lazyten/io.hh>
 
 // TODO Restructure this file and split it up into a hh and a cc
 
@@ -33,7 +33,7 @@ using gscfmock::matrix_type;
 template <typename Solver>
 class VerboseScf : public Solver {
  public:
-  VerboseScf(linalgwrap::io::DataWriter_i<scalar_type>& writer) : m_writer(writer) {}
+  VerboseScf(lazyten::io::DataWriter_i<scalar_type>& writer) : m_writer(writer) {}
 
  protected:
   typedef typename Solver::state_type state_type;
@@ -50,7 +50,7 @@ class VerboseScf : public Solver {
     auto evectors       = s.eigensolution().evectors();
 
     m_writer.write("evals" + std::to_string(s.n_iter()),
-                   linalgwrap::make_as_multivector<vector_type>(evalues));
+                   lazyten::make_as_multivector<vector_type>(evalues));
     m_writer.write("evecs" + std::to_string(s.n_iter()), evectors);
 
     // Print orbital evals:
@@ -99,7 +99,7 @@ class VerboseScf : public Solver {
     m_writer.write("pulayerror" + itstr, s.last_error_norm);
   }
 
-  linalgwrap::io::DataWriter_i<scalar_type>& m_writer;
+  lazyten::io::DataWriter_i<scalar_type>& m_writer;
 };
 
 using PlainScfHartreeFock = VerboseScf<gscfmock::error_wrapped_solvers::PlainScf>;

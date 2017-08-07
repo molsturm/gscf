@@ -23,13 +23,13 @@
 # Settings
 #
 # The git repo to checkout
-FROM="https://github.com/linalgwrap/linalgwrap.git"
+FROM="https://github.com/lazyten/lazyten.git"
 
 # Branch to checkout (empty for default)
 BRANCH=""
 
 # Folder to check it out to
-WHAT="linalgwrap"
+WHAT="lazyten"
 
 # Interval: How often to update (in seconds)
 INTERVAL="3600" # == 1 hour

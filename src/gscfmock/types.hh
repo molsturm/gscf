@@ -18,7 +18,7 @@
 //
 
 #pragma once
-#include <linalgwrap/SmallMatrix.hh>
+#include <lazyten/SmallMatrix.hh>
 
 namespace gscfmock {
 
@@ -26,7 +26,7 @@ namespace gscfmock {
 typedef double scalar_type;
 
 /** The stored matrix type to use in gscfmock */
-typedef linalgwrap::SmallMatrix<scalar_type> matrix_type;
+typedef lazyten::SmallMatrix<scalar_type> matrix_type;
 
 /** The vector type to use in gscfmock */
 typedef typename matrix_type::vector_type vector_type;

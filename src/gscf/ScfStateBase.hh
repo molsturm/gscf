@@ -19,11 +19,11 @@
 
 #pragma once
 #include "ScfProblemMatrix_i.hh"
-#include <linalgwrap/Base/Solvers.hh>
+#include <lazyten/Base/Solvers.hh>
 
 namespace gscf {
 
-// TODO should this live in linalgwrap?
+// TODO should this live in lazyten?
 /** The type to access some eigenproblem statistics from the most recent
  *  inner eigensolver invocation. */
 struct EigenproblemStatistics {
@@ -53,18 +53,16 @@ struct EigenproblemStatistics {
  */
 template <typename ProblemMatrix, typename OverlapMatrix,
           typename DiagonalisedMatrix = ProblemMatrix>
-class ScfStateBase
-      : public linalgwrap::IterativeStateWrapper<linalgwrap::SolverStateBase> {
+class ScfStateBase : public lazyten::IterativeStateWrapper<lazyten::SolverStateBase> {
 
   static_assert(std::is_base_of<ScfProblemMatrix_i, ProblemMatrix>::value,
                 "The ProblemMatrix needs to be derived off ScfProblemMatrix_i for SCF "
                 "algorithms to work.");
 
-  static_assert(
-        std::is_same<typename linalgwrap::StoredTypeOf<ProblemMatrix>::type,
-                     typename linalgwrap::StoredTypeOf<OverlapMatrix>::type>::value,
-        "The stored matrix types of OverlapMatrix and ProblemMatrix have to "
-        "agree.");
+  static_assert(std::is_same<typename lazyten::StoredTypeOf<ProblemMatrix>::type,
+                             typename lazyten::StoredTypeOf<OverlapMatrix>::type>::value,
+                "The stored matrix types of OverlapMatrix and ProblemMatrix have to "
+                "agree.");
 
  public:
   /** \name Type definitions */
@@ -99,7 +97,7 @@ class ScfStateBase
   typedef typename matrix_type::vector_type vector_type;
 
   /** The type of the eigensolution */
-  typedef linalgwrap::Eigensolution<scalar_type, vector_type> esoln_type;
+  typedef lazyten::Eigensolution<scalar_type, vector_type> esoln_type;
   ///@}
 
   /** Get the overlap matrix of the SCF problem */
@@ -168,9 +166,9 @@ class ScfStateBase
    * eigenvectors and the eigenvalues pointers are set to nullptr.
    * */
   ScfStateBase(probmat_type prob_mat, const OverlapMatrix& overlap_mat)
-        : linalgwrap::IterativeStateWrapper<
-                linalgwrap::SolverStateBase>{linalgwrap::SolverStateBase()},
-          last_error_norm{linalgwrap::Constants<real_type>::invalid},
+        : lazyten::IterativeStateWrapper<
+                lazyten::SolverStateBase>{lazyten::SolverStateBase()},
+          last_error_norm{lazyten::Constants<real_type>::invalid},
           problem_matrix_ptr{std::make_shared<probmat_type>(std::move(prob_mat))},
           diagonalised_matrix_ptr{nullptr},
           m_n_mtx_applies(0),
@@ -181,8 +179,8 @@ class ScfStateBase
     // Note: This assumption is build into the update_eigenpairs method
     //       of ScfBase.
     assert_dbg(problem_matrix_ptr->is_hermitian(
-                     100 * linalgwrap::Constants<real_type>::default_tolerance),
-               linalgwrap::ExcMatrixNotHermitian());
+                     100 * lazyten::Constants<real_type>::default_tolerance),
+               lazyten::ExcMatrixNotHermitian());
   }
 
   /** \name Transfer a guess to this state */
@@ -253,9 +251,10 @@ class ScfStateBase
   // this is as of now always the vector_type of the stored matrix for
   // the eigenvectors and the scalar type for the eigenvalues.
   // This is just here to check that this is really what we get.
-  static_assert(std::is_same<esoln_type, typename linalgwrap::EigensolutionTypeFor<
-                                               true, diagmat_type>>::value,
-                "Problem when determining the eigensolution type");
+  static_assert(
+        std::is_same<esoln_type,
+                     typename lazyten::EigensolutionTypeFor<true, diagmat_type>>::value,
+        "Problem when determining the eigensolution type");
 };
 
 //@{

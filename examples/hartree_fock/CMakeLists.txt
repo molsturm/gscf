@@ -37,9 +37,6 @@ set_target_properties(
 	COMPILE_DEFINITIONS "${EXAMPLES_BUILD_TYPE}"
 )
 
-# setup definitions.
-target_compile_definitions(hartree_fock PRIVATE "${GSCF_DEFINITIONS};${GSCF_DEFINITIONS_${EXAMPLES_BUILD_TYPE}}")
-
 # link it with the appropriate gscf and gscfmock library target
 target_link_libraries(hartree_fock
 	${gscf_${EXAMPLES_BUILD_TYPE}_TARGET}

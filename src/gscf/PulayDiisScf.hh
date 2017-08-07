@@ -23,7 +23,7 @@
 #include "ScfBase.hh"
 #include "ScfStateBase.hh"
 #include <krims/CircularBuffer.hh>
-#include <linalgwrap/solve.hh>
+#include <lazyten/solve.hh>
 
 namespace gscf {
 
@@ -117,9 +117,9 @@ struct PulayDiisScfState : public ScfStateBase<ProblemMatrix, OverlapMatrix,
  * ## Control parameters and their default values
  *   - max_iter: Maximum number of iterations. (Default: 100)
  *   - n_eigenpairs: The number of eigenpairs to seek
- *          (Default: linalgwrap::Constanst<size_type>::all)
+ *          (Default: lazyten::Constanst<size_type>::all)
  *   - eigensolver_params: krims::Parameter map containing the parameters
- *          for the eigensolver. See linalgwrap/eigensystem.hh or the
+ *          for the eigensolver. See lazyten/eigensystem.hh or the
  *          documentation of your chosen eigensolver for possible values.
  *          Note that this map can be used to *select* an eigensolver as
  *          well.
@@ -350,7 +350,7 @@ PulayDiisScf<ScfState>::diis_linear_system_matrix(const state_type& s) const {
   B(n_errors, n_errors) = 0.;
 
   // The B matrix needs to be real symmetric by definition
-  B.add_properties(linalgwrap::OperatorProperties::RealSymmetric);
+  B.add_properties(lazyten::OperatorProperties::RealSymmetric);
 
   return B;
 }
@@ -382,19 +382,19 @@ void PulayDiisScf<ScfState>::update_diis_coefficients(state_type& s) const {
     const krims::GenMap param{{"tolerance", base_type::inner_solver_tolerance(s)}};
 
     vector_type x(n_errors + 1, /* zero= */ false);
-    linalgwrap::solve(B, x, rhs, param);
+    lazyten::solve(B, x, rhs, param);
 
     // Keep the first n_errors entries of the vector.
     // TODO more clever way to do this?
     s.diis_coefficients = vector_type(std::begin(x), std::next(std::begin(x), n_errors));
-  } catch (const linalgwrap::SolverException& e) {
+  } catch (const lazyten::SolverException& e) {
     solver_assert(false, s, ExcDiisStepFailed(e.extra()));
   }
 }
 
 template <typename ScfState>
 void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
-  using namespace linalgwrap;
+  using namespace lazyten;
   using namespace krims;
   assert_internal(s.prev_problem_matrix_ptrs.size() == s.diis_coefficients.size());
 
@@ -445,7 +445,7 @@ void PulayDiisScf<ScfState>::append_new_overlaps(state_type& s) const {
   // where n is the current iteration number.
 
   // Resulting overlaps:
-  std::vector<scalar_type> ret(s.errors.size(), linalgwrap::Constants<scalar_type>::zero);
+  std::vector<scalar_type> ret(s.errors.size(), lazyten::Constants<scalar_type>::zero);
   // Fill vector from behind (reverse iterator)
   auto itoverlap = ret.rbegin();
 

@@ -43,7 +43,7 @@ enum class OrbitalSpace {
  *  require from the Problem matrix to be solved.
  *
  *  It essentially is an extension to the default, generic, problem
- *  matrix interface given by a linalgwrap::LazyMatrixExpression,
+ *  matrix interface given by a lazyten::LazyMatrixExpression,
  *  which is required for some SCF solvers which are used especially
  *  in quantum chemistry.
  *
@@ -61,7 +61,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   /** Return the one electron energy, i.e. the energy of the
    *  terms independent of the electron density.
    *
-   *  This energy is usually proportional to \f$\tr(h D)\f$,
+   *  This energy is usually proportional to \f$tr(h D)\f$,
    *  where \f$h\f$ is the part of this matrix, which is
    *  constant wrt. changes in the density \f$D\f$ (the core
    *  hamiltonian).
@@ -70,7 +70,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
 
   /** Return the two electron energy.
    *
-   *  This energy is usually proportional to \f$\frac 1 2 \tr(G D)\f$,
+   *  This energy is usually proportional to \f$\frac 1 2 tr(G D)\f$,
    *  where \f$G\f$ is the part of this matrix, which is
    *  dependant on the density \f$D\f$, i.e. the Coulomb and Exchange
    *  matrices.
@@ -106,7 +106,7 @@ class FocklikeMatrix_i : public ScfProblemMatrix_i {
   // *  These are exactly the coefficients, which have been supplied
   // *  by the most recent call to update() to this matrix object.
   // */
-  // virtual const linalgwrap::MultiVector<vector_type>& coefficients() const = 0;
+  // virtual const lazyten::MultiVector<vector_type>& coefficients() const = 0;
 
   FocklikeMatrix_i()                        = default;
   virtual ~FocklikeMatrix_i()               = default;

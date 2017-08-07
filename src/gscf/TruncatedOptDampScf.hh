@@ -102,9 +102,9 @@ struct TruncatedOptDampScfState
  * ## Control parameters and their default values
  *   - max_iter: Maximum number of iterations. (Default: 100)
  *   - n_eigenpairs: The number of eigenpairs to seek
- *          (Default: linalgwrap::Constanst<size_type>::all)
+ *          (Default: lazyten::Constanst<size_type>::all)
  *   - eigensolver_params: krims::Parameter map containing the parameters
- *          for the eigensolver. See linalgwrap/eigensystem.hh or the
+ *          for the eigensolver. See lazyten/eigensystem.hh or the
  *          documentation of your chosen eigensolver for possible values.
  *          Note that this map can be used to *select* an eigensolver as
  *          well.

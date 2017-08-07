@@ -41,7 +41,7 @@ krims::Range<size_t> FockMatrix::indices_orbspace(gscf::OrbitalSpace osp) const 
 
 FockMatrix::FockMatrix(size_t n_alpha, size_t n_beta,
                        const IntegralDataBase& integral_data,
-                       const linalgwrap::MultiVector<vector_type>& initial_guess_bf,
+                       const lazyten::MultiVector<vector_type>& initial_guess_bf,
                        bool store_hf_terms)
       : m_n_alpha{n_alpha},
         m_n_beta{n_beta},
@@ -190,7 +190,7 @@ void FockMatrix::build_fock_matrix_from_density(matrix_type pa_bb, matrix_type p
 }
 
 void FockMatrix::build_fock_matrix_from_coefficient(
-      const linalgwrap::MultiVector<vector_type>& coefficients_bf) {
+      const lazyten::MultiVector<vector_type>& coefficients_bf) {
   // Assert coefficients have the correct size:
   assert_size(m_idata_ptr->nbas(), coefficients_bf.n_elem());
 

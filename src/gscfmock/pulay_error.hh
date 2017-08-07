@@ -26,7 +26,7 @@ class FockMatrix;
 
 //! Compute the Pulay error
 matrix_type pulay_error(const FockMatrix& fock_bb,
-                        const linalgwrap::MultiVector<const vector_type>& coefficients_bf,
+                        const lazyten::MultiVector<const vector_type>& coefficients_bf,
                         const matrix_type& overlap_bb);
 
 }  // namespace gscfmock

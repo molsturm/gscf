@@ -51,17 +51,17 @@ flags = [
     '-std=c++14',
     # Treat .h header files as c++:
     '-x', 'c++',
-    # Include other libraries and show errors and 
+    # Include other libraries and show errors and
     # warnings within them
-    # To suppress errors shown here, use "-isystem" 
+    # To suppress errors shown here, use "-isystem"
     # instead of "-I"
     '-I', 'src',
     '-isystem', 'external/rapidcheck/include',
     '-isystem', 'external/rapidcheck/ext/catch/include',
     '-isystem', 'external/krims/src',
-    '-isystem', 'external/linalgwrap/src',
+    '-isystem', 'external/lazyten/src',
     '-isystem', '../krims/src',
-    '-isystem', '../linalgwrap/src',
+    '-isystem', '../lazyten/src',
     '-isystem', '../rapidcheck/ext/catch/include',
     '-isystem', '../rapidcheck/include',
     '-isystem', '/usr/lib/ycmd/clang_includes',

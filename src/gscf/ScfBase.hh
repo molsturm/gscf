@@ -20,10 +20,10 @@
 #pragma once
 #include "ScfBaseKeys.hh"
 #include "ScfStateBase.hh"
-#include <linalgwrap/Base/Solvers.hh>
-#include <linalgwrap/EigensystemSolver.hh>
-#include <linalgwrap/eigensystem.hh>
-#include <linalgwrap/rescue.hh>
+#include <lazyten/Base/Solvers.hh>
+#include <lazyten/EigensystemSolver.hh>
+#include <lazyten/eigensystem.hh>
+#include <lazyten/rescue.hh>
 
 // TODO Remove once proper open-shell handling is in place
 #include "FocklikeMatrix_i.hh"
@@ -46,12 +46,12 @@ DefSolverException1(ExcInnerEigensolverFailed, std::string, details,
  * \see gscf::ScfStateBase
  * */
 template <typename State>
-class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> {
+class ScfBase : public lazyten::IterativeWrapper<lazyten::SolverBase<State>> {
   static_assert(IsScfState<State>::value,
                 "State needs to be a type derived from ScfStateBase");
 
  public:
-  typedef linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State>> base_type;
+  typedef lazyten::IterativeWrapper<lazyten::SolverBase<State>> base_type;
   typedef typename base_type::state_type state_type;
 
   /** \name Types forwarded from ScfState */
@@ -84,7 +84,7 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
   /** \name Iteration control */
   ///@{
   /** The number of eigenpairs to calculate in the SCF procedure */
-  size_type n_eigenpairs = linalgwrap::Constants<size_type>::all;
+  size_type n_eigenpairs = lazyten::Constants<size_type>::all;
 
   /** The parameters for the inner eigensolver */
   krims::GenMap eigensolver_params;
@@ -102,7 +102,7 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
     n_eigenpairs               = map.at(ScfBaseKeys::n_eigenpairs, n_eigenpairs);
     max_error_norm             = map.at(ScfBaseKeys::max_error_norm, max_error_norm);
     eigensolver_params         = map.submap(ScfBaseKeys::eigensolver_params);
-    user_eigensolver_tolerance = map.exists(linalgwrap::EigensystemSolverKeys::tolerance);
+    user_eigensolver_tolerance = map.exists(lazyten::EigensystemSolverKeys::tolerance);
   }
 
   /** Has the user provided tolerance settings for the eigensolver? */
@@ -186,7 +186,7 @@ class ScfBase : public linalgwrap::IterativeWrapper<linalgwrap::SolverBase<State
    * certain events happen.
    *
    * Further handler functions can be found in IterativeSolver and
-   * SolverBase of linalgwrap.
+   * SolverBase of lazyten.
    */
   ///@{
   /** Handler which is called once the problem matrix has been diagonalised
@@ -271,7 +271,7 @@ typename ScfBase<ScfState>::matrix_type ScfBase<ScfState>::calculate_error(
   if (s.previous_eigensolution().evectors().n_vectors() == 0) {
     // Cannot compute any matrix, since no previous vectors
     // to compare against:
-    return matrix_type{{linalgwrap::Constants<scalar_type>::invalid}};
+    return matrix_type{{lazyten::Constants<scalar_type>::invalid}};
   }
 
   const auto& prev_evec = s.previous_eigensolution().evectors();
@@ -290,7 +290,7 @@ typename ScfBase<ScfState>::matrix_type ScfBase<ScfState>::calculate_error(
 
 template <typename ScfState>
 void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
-  using namespace linalgwrap;
+  using namespace lazyten;
 
   assert_dbg(s.diagonalised_matrix_ptr != nullptr,
              krims::ExcInvalidState("update_eigenpairs needs a valid "
@@ -330,8 +330,8 @@ void ScfBase<ScfState>::update_eigenpairs(state_type& s) const {
     solver.solve_state(state);
     s.push_new_eigensolution(std::move(state.eigensolution()),
                              {state.n_iter(), state.n_mtx_applies()});
-  } catch (const linalgwrap::SolverException& e) {
-    linalgwrap::rescue::failed_eigenproblem(problem, eigensolver_params);
+  } catch (const lazyten::SolverException& e) {
+    lazyten::rescue::failed_eigenproblem(problem, eigensolver_params);
     solver_assert(false, s, ExcInnerEigensolverFailed(e.extra()));
   }
   // Call the handler

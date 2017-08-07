@@ -31,7 +31,7 @@ drb_init()
 ##########################################################################
 # Project setup
 
-project(gscf VERSION 0.0.0)
+project(gscf VERSION 0.1.0)
 message("\n# Configuring ${PROJECT_NAME}\n#")
 
 # Global include directories for this project:

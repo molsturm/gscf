@@ -20,8 +20,6 @@
 ## ---------------------------------------------------------------------
 
 # Installs the cmake apckage information this project provides
-#
-# Requires the variable PackageModuleLocation to be set.
 
 # Write a basic version file for gscf
 include(CMakePackageConfigHelpers)
@@ -40,7 +38,7 @@ configure_file(cmake/gscfConfig.cmake.in
 install(FILES
 	"${gscf_BINARY_DIR}/gscfConfig.cmake"
 	"${gscf_BINARY_DIR}/gscfConfigVersion.cmake"
-	DESTINATION "${PackageModuleLocation}/gscf"
+	DESTINATION "cmake/share/gscf"
 	COMPONENT devel
 )
 

@@ -28,8 +28,7 @@ update_file "lazyten" "external/get_krims.sh" || exit 1
 
 update_file "krims"   "cmake/findRapidcheck.cmake" || exit 1
 update_file "krims"   "cmake/findCatch.cmake" || exit 1
-update_file "lazyten" "cmake/findKrims.cmake" || exit 1
-update_file "lazyten" "cmake/IncludeKrimsCmakeModule.cmake" || exit 1
+update_file "krims"   "cmake/IncludeKrimsCmakeModule.cmake" || exit 1
 
 update_file "krims"   "doc/Doxyfile.in" || exit 1
 

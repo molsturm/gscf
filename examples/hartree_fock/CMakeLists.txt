@@ -41,6 +41,4 @@ set_target_properties(
 target_link_libraries(hartree_fock
 	${gscf_${EXAMPLES_BUILD_TYPE}_TARGET}
 	${gscfmock_${EXAMPLES_BUILD_TYPE}_TARGET}
-	${GSCF_DEPENDENCIES}
-	${GSCF_DEPENDENCIES_${EXAMPLES_BUILD_TYPE}}
 )

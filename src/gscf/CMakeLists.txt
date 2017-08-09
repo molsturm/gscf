@@ -77,6 +77,6 @@ export(EXPORT GscfTargets
 install(EXPORT GscfTargets
 	FILE "gscfTargets.cmake"
 	NAMESPACE Upstream::
-	DESTINATION "${PackageModuleLocation}/gscf"
+	DESTINATION "cmake/share/gscf"
 )
 

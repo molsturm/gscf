@@ -19,5 +19,7 @@
 ## along with gscf. If not, see <http://www.gnu.org/licenses/>.
 ##
 ## ---------------------------------------------------------------------
-rm -rf .last_pull krims lazyten rapidcheck
+FOLDERS=".last_pull krims lazyten rapidcheck"
+read -p "Press Enter to delete the following folders:  $FOLDERS "
+rm -rf $FOLDERS
 exit $?

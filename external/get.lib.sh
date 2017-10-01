@@ -135,10 +135,16 @@ checkout_repo () {
 	I_WHAT="$2"
 	# the file to check after checkout
 	I_CHECKFILE="$3"
-	# which branch to checkout
+	# which branch or commit to checkout
 	I_BRANCH="$4"
 
-	# No branch specified
+	# Check whether the branch is actually a commit
+	if echo "$I_BRANCH" | grep -qE '[0-9a-f]{40}'; then
+		I_COMMIT="$I_BRANCH"
+		I_BRANCH=""
+	fi
+
+	# Branch specified
 	if [ "$I_BRANCH" ]; then
 		I_EXTRA=" (branch: $I_BRANCH)"
 		I_ARGS="--branch $I_BRANCH"
@@ -150,7 +156,15 @@ checkout_repo () {
 		return 1
 	fi
 
+	# Clone and switch to commit if needed
 	git clone $I_ARGS --recursive "$I_FROM" "$I_WHAT" || return 1
+	if [ "$I_COMMIT" ]; then
+		OPWD="$PWD"
+		cd "$I_WHAT"
+		echo "-- Switching to commit $I_COMMIT"
+		git checkout --detach "$I_COMMIT" || return 1
+		cd "$OPWD"
+	fi
 	if [ -f "$I_WHAT/$I_CHECKFILE" ]; then
 		mark_update_done "$I_WHAT" || return 1
 		return 0

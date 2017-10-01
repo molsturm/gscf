@@ -40,7 +40,7 @@ INTERVAL="3600"
 CHECKFILE="CMakeLists.txt"
 
 # Branch to checkout (empty for default)
-BRANCH=""
+BRANCH="9eb1e620cf84aa6bec638ef7bb1ed6e4989f43a2"
 
 if [ ! -f "$PWD/get.lib.sh" ]; then
 	echo "PWD needs to be the location of the get.lib.sh file."

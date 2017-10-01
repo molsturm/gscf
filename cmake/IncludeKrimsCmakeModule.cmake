@@ -100,9 +100,17 @@ macro(include_krims_cmake_module MODULE)
 		set(FIRST_TRY_LOCATION "${krims_DIR}/../modules/${MODULE}.cmake")
 	endif()
 
-	if ("${krims_DIR}" STREQUAL "krims_DIR-AUTOCHECKOUT"
+	# Krims is already configured as a project somewhere ...
+	# use that location with highest priority and do not proceed to autocheckout,
+	# even if that is forced. The rationale is that otherwise autocheckout will be
+	# forced in each submodule ... which is not what we want.
+	if (NOT "${krims_SOURCE_DIR}" STREQUAL "")
+		set(FIRST_TRY_LOCATION "${krims_SOURCE_DIR}/cmake/modules/${MODULE}.cmake")
+	elseif("${krims_DIR}" STREQUAL "krims_DIR-AUTOCHECKOUT"
 			OR "$ENV{krims_DIR}" STREQUAL "krims_DIR-AUTOCHECKOUT"
 			OR AUTOCHECKOUT_FORCED)
+		# Do autocheckout if it is forced or otherwise wanted
+		# and if we have not configured krims elsewhere.
 		autocheckout_krims()
 
 		set(FIRST_TRY_LOCATION

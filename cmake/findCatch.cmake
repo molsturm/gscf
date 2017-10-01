@@ -70,7 +70,7 @@ if ("${catch_INCLUDE_DIR}" STREQUAL "catch_INCLUDE_DIR-NOTFOUND")
 		ExternalProject_Add(catchFromGit
 			PREFIX "${PROJECT_BINARY_DIR}/external/catch"
 			GIT_REPOSITORY "https://github.com/philsquared/Catch"
-			GIT_TAG "v1.6.0"   # TODO Latest version known to work
+			GIT_TAG "v1.9.7"
 			#
 			# No configure or build neccessary
 			CONFIGURE_COMMAND ""

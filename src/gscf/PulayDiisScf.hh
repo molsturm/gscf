@@ -409,6 +409,7 @@ void PulayDiisScf<ScfState>::update_diis_diagmat(state_type& s) const {
     // TODO Ignore Fock matrices where the coefficient is too small
     // and add the coefficient value to the fock matrix which has the
     // largest value already
+    // or alternatively renormalise
 
     // Form linear combination according to coefficients:
     auto probmat_pit = std::begin(s.prev_problem_matrix_ptrs);
